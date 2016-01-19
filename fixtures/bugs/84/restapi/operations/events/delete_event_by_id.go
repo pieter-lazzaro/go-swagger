@@ -23,7 +23,7 @@ type DeleteEventByIDHandler interface {
 }
 
 // NewDeleteEventByID creates a new http.Handler for the delete event by id operation
-func NewDeleteEventByID(ctx *middleware.Context, handler DeleteEventByIDHandler) *DeleteEventByID {
+func NewDeleteEventByID(ctx *middleware.ApiContext, handler DeleteEventByIDHandler) *DeleteEventByID {
 	return &DeleteEventByID{Context: ctx, Handler: handler}
 }
 
@@ -33,7 +33,7 @@ Delete event by id.
 
 */
 type DeleteEventByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  DeleteEventByIDParams
 	Handler DeleteEventByIDHandler
 }

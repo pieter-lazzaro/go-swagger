@@ -23,7 +23,7 @@ type PostEventHandler interface {
 }
 
 // NewPostEvent creates a new http.Handler for the post event operation
-func NewPostEvent(ctx *middleware.Context, handler PostEventHandler) *PostEvent {
+func NewPostEvent(ctx *middleware.ApiContext, handler PostEventHandler) *PostEvent {
 	return &PostEvent{Context: ctx, Handler: handler}
 }
 
@@ -33,7 +33,7 @@ Create new event.
 
 */
 type PostEvent struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  PostEventParams
 	Handler PostEventHandler
 }

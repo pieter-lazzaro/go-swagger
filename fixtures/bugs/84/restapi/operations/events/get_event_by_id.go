@@ -23,7 +23,7 @@ type GetEventByIDHandler interface {
 }
 
 // NewGetEventByID creates a new http.Handler for the get event by id operation
-func NewGetEventByID(ctx *middleware.Context, handler GetEventByIDHandler) *GetEventByID {
+func NewGetEventByID(ctx *middleware.ApiContext, handler GetEventByIDHandler) *GetEventByID {
 	return &GetEventByID{Context: ctx, Handler: handler}
 }
 
@@ -33,7 +33,7 @@ Get event by id.
 
 */
 type GetEventByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetEventByIDParams
 	Handler GetEventByIDHandler
 }
