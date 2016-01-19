@@ -25,7 +25,7 @@ import (
 	"github.com/go-swagger/go-swagger/strfmt"
 	"github.com/gorilla/context"
 	"github.com/naoina/denco"
-    netContext "golang.org/x/net/context"
+	netContext "golang.org/x/net/context"
 )
 
 // RouteParam is a object to capture route params in a framework agnostic way.
@@ -73,20 +73,26 @@ func newRouter(ctx *ApiContext, next Handler) http.Handler {
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		defer context.Clear(r)
-        
-        // create a new request context
-        rCtx := netContext.TODO()
-        
+
+		// create a new request context
+		rCtx := netContext.TODO()
+
+		matchedRoute, routeFound := ctx.LookupRoute(r)
+
 		// use context to lookup routes
 		if isRoot {
-			if _, ok := ctx.RouteInfo(r); ok {
+			if routeFound {
+				rCtx = NewContextWithMatchedRoute(rCtx, matchedRoute)
 				next.ServeHTTP(rCtx, rw, r)
 				return
 			}
 		} else {
 			if p := strings.TrimPrefix(r.URL.Path, basePath); len(p) < len(r.URL.Path) {
 				r.URL.Path = p
-				if _, ok := ctx.RouteInfo(r); ok {
+				matchedRoute, routeFound := ctx.LookupRoute(r)
+
+				if routeFound {
+					rCtx = NewContextWithMatchedRoute(rCtx, matchedRoute)
 					next.ServeHTTP(rCtx, rw, r)
 					return
 				}

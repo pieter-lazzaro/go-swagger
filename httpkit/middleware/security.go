@@ -21,7 +21,7 @@ import (
 
 func newSecureAPI(ctx *ApiContext, next Handler) Handler {
 	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
-		route, _ := ctx.RouteInfo(r)
+		route := MatchedRouteFromContext(rCtx)
 		if len(route.Authenticators) == 0 {
 			next.ServeHTTP(rCtx, rw, r)
 			return
