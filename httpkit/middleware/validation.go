@@ -21,12 +21,14 @@ import (
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit"
 	"github.com/go-swagger/go-swagger/swag"
+    
+    "golang.org/x/net/context"
 )
 
 // NewValidation starts a new validation middleware
-func newValidation(ctx *Context, next http.Handler) http.Handler {
+func newValidation(ctx *ApiContext, next Handler) Handler {
 
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
 		matched, _ := ctx.RouteInfo(r)
 		_, result := ctx.BindAndValidate(r, matched)
 
@@ -35,12 +37,12 @@ func newValidation(ctx *Context, next http.Handler) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(rw, r)
+		next.ServeHTTP(rCtx, rw, r)
 	})
 }
 
 type validation struct {
-	context *Context
+	context *ApiContext
 	result  []error
 	request *http.Request
 	route   *MatchedRoute
@@ -68,7 +70,7 @@ func validateContentType(allowed []string, actual string) *errors.Validation {
 	return errors.InvalidContentType(actual, allowed)
 }
 
-func validateRequest(ctx *Context, request *http.Request, route *MatchedRoute) *validation {
+func validateRequest(ctx *ApiContext, request *http.Request, route *MatchedRoute) *validation {
 	validate := &validation{
 		context: ctx,
 		request: request,

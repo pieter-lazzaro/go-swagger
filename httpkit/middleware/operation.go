@@ -14,12 +14,15 @@
 
 package middleware
 
-import "net/http"
+import (
+    "golang.org/x/net/context"
+    "net/http"
+)
 
-func newOperationExecutor(ctx *Context) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+func newOperationExecutor(ctx *ApiContext) Handler {
+	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
 		// use context to lookup routes
 		route, _ := ctx.RouteInfo(r)
-		route.Handler.ServeHTTP(rw, r)
+		route.Handler.ServeHTTP(rCtx, rw, r)
 	})
 }

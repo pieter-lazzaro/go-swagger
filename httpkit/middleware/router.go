@@ -25,6 +25,7 @@ import (
 	"github.com/go-swagger/go-swagger/strfmt"
 	"github.com/gorilla/context"
 	"github.com/naoina/denco"
+    netContext "golang.org/x/net/context"
 )
 
 // RouteParam is a object to capture route params in a framework agnostic way.
@@ -60,7 +61,7 @@ func (r RouteParams) GetOK(name string) ([]string, bool, bool) {
 	return nil, false, false
 }
 
-func newRouter(ctx *Context, next http.Handler) http.Handler {
+func newRouter(ctx *ApiContext, next Handler) http.Handler {
 	if ctx.router == nil {
 		ctx.router = DefaultRouter(ctx.spec, ctx.api)
 	}
@@ -72,17 +73,21 @@ func newRouter(ctx *Context, next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		defer context.Clear(r)
+        
+        // create a new request context
+        rCtx := netContext.TODO()
+        
 		// use context to lookup routes
 		if isRoot {
 			if _, ok := ctx.RouteInfo(r); ok {
-				next.ServeHTTP(rw, r)
+				next.ServeHTTP(rCtx, rw, r)
 				return
 			}
 		} else {
 			if p := strings.TrimPrefix(r.URL.Path, basePath); len(p) < len(r.URL.Path) {
 				r.URL.Path = p
 				if _, ok := ctx.RouteInfo(r); ok {
-					next.ServeHTTP(rw, r)
+					next.ServeHTTP(rCtx, rw, r)
 					return
 				}
 			}
@@ -100,7 +105,7 @@ func newRouter(ctx *Context, next http.Handler) http.Handler {
 // RoutableAPI represents an interface for things that can serve
 // as a provider of implementations for the swagger router
 type RoutableAPI interface {
-	HandlerFor(string, string) (http.Handler, bool)
+	HandlerFor(string, string) (Handler, bool)
 	ServeErrorFor(string) func(http.ResponseWriter, *http.Request, error)
 	ConsumersFor([]string) map[string]httpkit.Consumer
 	ProducersFor([]string) map[string]httpkit.Producer
@@ -158,7 +163,7 @@ type routeEntry struct {
 	Produces       []string
 	Producers      map[string]httpkit.Producer
 	Parameters     map[string]spec.Parameter
-	Handler        http.Handler
+	Handler        Handler
 	Formats        strfmt.Registry
 	Binder         *untypedRequestBinder
 	Authenticators map[string]httpkit.Authenticator
