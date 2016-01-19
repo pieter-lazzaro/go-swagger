@@ -29,7 +29,8 @@ import (
 func newValidation(ctx *ApiContext, next Handler) Handler {
 
 	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
-		matched, _ := ctx.RouteInfo(r)
+		matched := MatchedRouteFromContext(rCtx)
+        
 		_, result := ctx.BindAndValidate(r, matched)
 
 		if result != nil {

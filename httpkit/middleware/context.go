@@ -92,7 +92,7 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *ApiCo
 
 				handlers[um][path] = HandlerFunc(func(rCtx netContext.Context, w http.ResponseWriter, r *http.Request) {
 					// lookup route info in the context
-					route, _ := context.RouteInfo(r)
+					route := MatchedRouteFromContext(rCtx)
 
 					// bind and validate the request using reflection
 					bound, validation := context.BindAndValidate(r, route)

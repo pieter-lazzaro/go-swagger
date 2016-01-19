@@ -45,7 +45,7 @@ type {{ pascalize .Name }} struct {
 }
 
 func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-  route, _ := {{ .ReceiverName }}.Context.RouteInfo(r){{ if .Params }}
+  route := middleware.MatchedRouteFromContext(ctx){{ if .Params }}
   {{ .ReceiverName }}.Params = New{{ pascalize .Name }}Params()
   {{ end }}
   {{ if .Authorized }}uprinc, err := {{ .ReceiverName }}.Context.Authorize(r, route)

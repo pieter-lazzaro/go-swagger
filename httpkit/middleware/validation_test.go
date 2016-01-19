@@ -36,14 +36,22 @@ func TestContentTypeValidation(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/pets", nil)
 	request.Header.Add("Accept", "*/*")
-	mw.ServeHTTP(netContext.TODO(), recorder, request)
+	
+    r, _ := context.LookupRoute(request)
+	ctx := NewContextWithMatchedRoute(netContext.TODO(), r)
+	mw.ServeHTTP(ctx, recorder, request)
+    
 	assert.Equal(t, 200, recorder.Code)
 
 	recorder = httptest.NewRecorder()
 	request, _ = http.NewRequest("POST", "/pets", nil)
 	request.Header.Add("content-type", "application(")
 
-	mw.ServeHTTP(netContext.TODO(), recorder, request)
+	
+    r, _ = context.LookupRoute(request)
+	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	mw.ServeHTTP(ctx, recorder, request)
+    
 	assert.Equal(t, 400, recorder.Code)
 	assert.Equal(t, "application/json", recorder.Header().Get("content-type"))
 
@@ -52,7 +60,11 @@ func TestContentTypeValidation(t *testing.T) {
 	request.Header.Add("Accept", "application/json")
 	request.Header.Add("content-type", "text/html")
 
-	mw.ServeHTTP(netContext.TODO(), recorder, request)
+	
+    r, _ = context.LookupRoute(request)
+	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	mw.ServeHTTP(ctx, recorder, request)
+    
 	assert.Equal(t, 415, recorder.Code)
 	assert.Equal(t, "application/json", recorder.Header().Get("content-type"))
 }
@@ -68,7 +80,11 @@ func TestResponseFormatValidation(t *testing.T) {
 	request.Header.Set(httpkit.HeaderContentType, "application/json")
 	request.Header.Set(httpkit.HeaderAccept, "application/json")
 
-	mw.ServeHTTP(netContext.TODO(), recorder, request)
+	
+    r, _ := context.LookupRoute(request)
+	ctx := NewContextWithMatchedRoute(netContext.TODO(), r)
+	mw.ServeHTTP(ctx, recorder, request)
+    
 	assert.Equal(t, 200, recorder.Code, recorder.Body.String())
 
 	recorder = httptest.NewRecorder()
@@ -76,7 +92,11 @@ func TestResponseFormatValidation(t *testing.T) {
 	request.Header.Set(httpkit.HeaderContentType, "application/json")
 	request.Header.Set(httpkit.HeaderAccept, "application/sml")
 
-	mw.ServeHTTP(netContext.TODO(), recorder, request)
+	
+    r, _ = context.LookupRoute(request)
+	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	mw.ServeHTTP(ctx, recorder, request)
+    
 	assert.Equal(t, http.StatusNotAcceptable, recorder.Code)
 }
 

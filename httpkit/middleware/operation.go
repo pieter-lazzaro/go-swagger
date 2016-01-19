@@ -22,7 +22,7 @@ import (
 func newOperationExecutor(ctx *ApiContext) Handler {
 	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
 		// use context to lookup routes
-		route, _ := ctx.RouteInfo(r)
+		route := MatchedRouteFromContext(rCtx)
 		route.Handler.ServeHTTP(rCtx, rw, r)
 	})
 }
