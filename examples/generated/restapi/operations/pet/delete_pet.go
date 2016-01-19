@@ -40,7 +40,7 @@ type DeletePet struct {
 }
 
 func (o *DeletePet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewDeletePetParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

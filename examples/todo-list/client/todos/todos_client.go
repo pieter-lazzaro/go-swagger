@@ -84,7 +84,7 @@ func (a *Client) Find(params *FindParams, authInfo client.AuthInfoWriter) (*Find
 		ID:          "find",
 		Method:      "GET",
 		PathPattern: "/",
-		Schemes:     []string{"https", "http"},
+		Schemes:     []string{"http", "https"},
 		Params:      params,
 		Reader:      &FindReader{formats: a.formats},
 		AuthInfo:    authInfo,

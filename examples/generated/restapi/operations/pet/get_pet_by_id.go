@@ -42,7 +42,7 @@ type GetPetByID struct {
 }
 
 func (o *GetPetByID) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewGetPetByIDParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

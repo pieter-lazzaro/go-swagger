@@ -40,7 +40,7 @@ type GetUserByName struct {
 }
 
 func (o *GetUserByName) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewGetUserByNameParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params

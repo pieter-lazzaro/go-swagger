@@ -47,7 +47,7 @@ type AddCommentToTask struct {
 }
 
 func (o *AddCommentToTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewAddCommentToTaskParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

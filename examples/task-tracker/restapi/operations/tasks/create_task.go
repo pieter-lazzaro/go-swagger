@@ -45,7 +45,7 @@ type CreateTask struct {
 }
 
 func (o *CreateTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewCreateTaskParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

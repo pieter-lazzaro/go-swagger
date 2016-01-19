@@ -40,7 +40,7 @@ type AddOne struct {
 }
 
 func (o *AddOne) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewAddOneParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

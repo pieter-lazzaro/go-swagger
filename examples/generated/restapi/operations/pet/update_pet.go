@@ -40,7 +40,7 @@ type UpdatePet struct {
 }
 
 func (o *UpdatePet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewUpdatePetParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

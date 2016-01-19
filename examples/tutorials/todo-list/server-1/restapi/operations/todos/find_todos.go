@@ -40,7 +40,7 @@ type FindTodos struct {
 }
 
 func (o *FindTodos) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewFindTodosParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params

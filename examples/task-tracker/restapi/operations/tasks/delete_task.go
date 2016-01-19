@@ -43,7 +43,7 @@ type DeleteTask struct {
 }
 
 func (o *DeleteTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewDeleteTaskParams()
 
 	uprinc, err := o.Context.Authorize(r, route)

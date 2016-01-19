@@ -40,7 +40,7 @@ type DestroyOne struct {
 }
 
 func (o *DestroyOne) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewDestroyOneParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
