@@ -5,7 +5,7 @@ package {{ .Package }}
 
 import (
   "net/http"
-
+  "golang.org/x/net/context"
   "github.com/go-swagger/go-swagger/httpkit/middleware"
   {{ range .DefaultImports }}{{ printf "%q" . }}
   {{ end }}
@@ -27,7 +27,7 @@ type {{ pascalize .Name }}Handler interface {
 }
 
 // New{{ pascalize .Name }} creates a new http.Handler for the {{ humanize .Name }} operation
-func New{{ pascalize .Name }}(ctx *middleware.Context, handler {{ pascalize .Name }}Handler) *{{ pascalize .Name }} {
+func New{{ pascalize .Name }}(ctx *middleware.ApiContext, handler {{ pascalize .Name }}Handler) *{{ pascalize .Name }} {
   return &{{ pascalize .Name }}{Context: ctx, Handler: handler}
 }
 
@@ -39,12 +39,12 @@ func New{{ pascalize .Name }}(ctx *middleware.Context, handler {{ pascalize .Nam
 
 */
 type {{ pascalize .Name }} struct {
-  Context *middleware.Context
+  Context *middleware.ApiContext
   {{ if .Params }}Params  {{ pascalize .Name }}Params
   {{ end }}Handler {{ pascalize .Name }}Handler
 }
 
-func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
   route, _ := {{ .ReceiverName }}.Context.RouteInfo(r){{ if .Params }}
   {{ .ReceiverName }}.Params = New{{ pascalize .Name }}Params()
   {{ end }}
