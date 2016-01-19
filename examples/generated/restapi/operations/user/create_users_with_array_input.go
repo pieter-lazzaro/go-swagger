@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // CreateUsersWithArrayInputHandlerFunc turns a function with the right signature into a create users with array input handler
@@ -23,7 +24,7 @@ type CreateUsersWithArrayInputHandler interface {
 }
 
 // NewCreateUsersWithArrayInput creates a new http.Handler for the create users with array input operation
-func NewCreateUsersWithArrayInput(ctx *middleware.Context, handler CreateUsersWithArrayInputHandler) *CreateUsersWithArrayInput {
+func NewCreateUsersWithArrayInput(ctx *middleware.ApiContext, handler CreateUsersWithArrayInputHandler) *CreateUsersWithArrayInput {
 	return &CreateUsersWithArrayInput{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Creates list of users with given input array
 
 */
 type CreateUsersWithArrayInput struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  CreateUsersWithArrayInputParams
 	Handler CreateUsersWithArrayInputHandler
 }
 
-func (o *CreateUsersWithArrayInput) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *CreateUsersWithArrayInput) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewCreateUsersWithArrayInputParams()
 

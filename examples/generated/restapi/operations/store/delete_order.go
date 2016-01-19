@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // DeleteOrderHandlerFunc turns a function with the right signature into a delete order handler
@@ -23,7 +24,7 @@ type DeleteOrderHandler interface {
 }
 
 // NewDeleteOrder creates a new http.Handler for the delete order operation
-func NewDeleteOrder(ctx *middleware.Context, handler DeleteOrderHandler) *DeleteOrder {
+func NewDeleteOrder(ctx *middleware.ApiContext, handler DeleteOrderHandler) *DeleteOrder {
 	return &DeleteOrder{Context: ctx, Handler: handler}
 }
 
@@ -35,12 +36,12 @@ For valid response try integer IDs with value < 1000. Anything above 1000 or non
 
 */
 type DeleteOrder struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  DeleteOrderParams
 	Handler DeleteOrderHandler
 }
 
-func (o *DeleteOrder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *DeleteOrder) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewDeleteOrderParams()
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UploadFileHandlerFunc turns a function with the right signature into a upload file handler
@@ -23,7 +24,7 @@ type UploadFileHandler interface {
 }
 
 // NewUploadFile creates a new http.Handler for the upload file operation
-func NewUploadFile(ctx *middleware.Context, handler UploadFileHandler) *UploadFile {
+func NewUploadFile(ctx *middleware.ApiContext, handler UploadFileHandler) *UploadFile {
 	return &UploadFile{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ uploads an image
 
 */
 type UploadFile struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UploadFileParams
 	Handler UploadFileHandler
 }
 
-func (o *UploadFile) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *UploadFile) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewUploadFileParams()
 

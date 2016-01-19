@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdatePetHandlerFunc turns a function with the right signature into a update pet handler
@@ -23,7 +24,7 @@ type UpdatePetHandler interface {
 }
 
 // NewUpdatePet creates a new http.Handler for the update pet operation
-func NewUpdatePet(ctx *middleware.Context, handler UpdatePetHandler) *UpdatePet {
+func NewUpdatePet(ctx *middleware.ApiContext, handler UpdatePetHandler) *UpdatePet {
 	return &UpdatePet{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Update an existing pet
 
 */
 type UpdatePet struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdatePetParams
 	Handler UpdatePetHandler
 }
 
-func (o *UpdatePet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *UpdatePet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewUpdatePetParams()
 

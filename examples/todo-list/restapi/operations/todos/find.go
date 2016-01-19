@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // FindHandlerFunc turns a function with the right signature into a find handler
@@ -23,7 +24,7 @@ type FindHandler interface {
 }
 
 // NewFind creates a new http.Handler for the find operation
-func NewFind(ctx *middleware.Context, handler FindHandler) *Find {
+func NewFind(ctx *middleware.ApiContext, handler FindHandler) *Find {
 	return &Find{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Find find API
 
 */
 type Find struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  FindParams
 	Handler FindHandler
 }
 
-func (o *Find) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *Find) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewFindParams()
 

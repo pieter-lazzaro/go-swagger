@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetTaskDetailsHandlerFunc turns a function with the right signature into a get task details handler
@@ -23,7 +24,7 @@ type GetTaskDetailsHandler interface {
 }
 
 // NewGetTaskDetails creates a new http.Handler for the get task details operation
-func NewGetTaskDetails(ctx *middleware.Context, handler GetTaskDetailsHandler) *GetTaskDetails {
+func NewGetTaskDetails(ctx *middleware.ApiContext, handler GetTaskDetailsHandler) *GetTaskDetails {
 	return &GetTaskDetails{Context: ctx, Handler: handler}
 }
 
@@ -39,12 +40,12 @@ There are also comments for each issue.
 
 */
 type GetTaskDetails struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetTaskDetailsParams
 	Handler GetTaskDetailsHandler
 }
 
-func (o *GetTaskDetails) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *GetTaskDetails) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewGetTaskDetailsParams()
 

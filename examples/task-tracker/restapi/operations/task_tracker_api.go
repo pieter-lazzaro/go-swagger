@@ -13,6 +13,7 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/security"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-swagger/go-swagger/swag"
 
 	"github.com/go-swagger/go-swagger/examples/task-tracker/restapi/operations/tasks"
 )
@@ -21,7 +22,7 @@ import (
 func NewTaskTrackerAPI(spec *spec.Document) *TaskTrackerAPI {
 	o := &TaskTrackerAPI{
 		spec:            spec,
-		handlers:        make(map[string]map[string]http.Handler),
+		handlers:        make(map[string]map[string]middleware.Handler),
 		formats:         strfmt.Default,
 		defaultConsumes: "application/vnd.goswagger.examples.task-tracker.v1+json",
 		defaultProduces: "application/vnd.goswagger.examples.task-tracker.v1+json",
@@ -40,8 +41,8 @@ This means that it exercises the framework relatively well.
 */
 type TaskTrackerAPI struct {
 	spec            *spec.Document
-	context         *middleware.Context
-	handlers        map[string]map[string]http.Handler
+	context         *middleware.ApiContext
+	handlers        map[string]map[string]middleware.Handler
 	formats         strfmt.Registry
 	defaultConsumes string
 	defaultProduces string
@@ -51,13 +52,13 @@ type TaskTrackerAPI struct {
 	// JSONProducer registers a producer for a "application/vnd.goswagger.examples.task-tracker.v1+json" mime type
 	JSONProducer httpkit.Producer
 
-	// TokenHeaderAuth registers a function that takes a token and returns a principal
-	// it performs authentication based on an api key X-Token provided in the header
-	TokenHeaderAuth func(string) (interface{}, error)
-
 	// APIKeyAuth registers a function that takes a token and returns a principal
 	// it performs authentication based on an api key token provided in the query
 	APIKeyAuth func(string) (interface{}, error)
+
+	// TokenHeaderAuth registers a function that takes a token and returns a principal
+	// it performs authentication based on an api key X-Token provided in the header
+	TokenHeaderAuth func(string) (interface{}, error)
 
 	// TasksAddCommentToTaskHandler sets the operation handler for the add comment to task operation
 	TasksAddCommentToTaskHandler tasks.AddCommentToTaskHandler
@@ -83,6 +84,9 @@ type TaskTrackerAPI struct {
 	// ServerShutdown is called when the HTTP(S) server is shut down and done
 	// handling all active connections and does not accept connections any more
 	ServerShutdown func()
+
+	// Custom command line argument groups with their descriptions
+	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
 }
 
 // SetDefaultProduces sets the default produces media type
@@ -127,12 +131,12 @@ func (o *TaskTrackerAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
-	if o.TokenHeaderAuth == nil {
-		unregistered = append(unregistered, "XTokenAuth")
-	}
-
 	if o.APIKeyAuth == nil {
 		unregistered = append(unregistered, "TokenAuth")
+	}
+
+	if o.TokenHeaderAuth == nil {
+		unregistered = append(unregistered, "XTokenAuth")
 	}
 
 	if o.TasksAddCommentToTaskHandler == nil {
@@ -186,13 +190,13 @@ func (o *TaskTrackerAPI) AuthenticatorsFor(schemes map[string]spec.SecuritySchem
 	for name, scheme := range schemes {
 		switch name {
 
-		case "token_header":
-
-			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.TokenHeaderAuth(tok) })
-
 		case "api_key":
 
 			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.APIKeyAuth(tok) })
+
+		case "token_header":
+
+			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.TokenHeaderAuth(tok) })
 
 		}
 	}
@@ -232,8 +236,8 @@ func (o *TaskTrackerAPI) ProducersFor(mediaTypes []string) map[string]httpkit.Pr
 
 }
 
-// HandlerFor gets a http.Handler for the provided operation method and path
-func (o *TaskTrackerAPI) HandlerFor(method, path string) (http.Handler, bool) {
+// HandlerFor gets a middleware.Handler for the provided operation method and path
+func (o *TaskTrackerAPI) HandlerFor(method, path string) (middleware.Handler, bool) {
 	if o.handlers == nil {
 		return nil, false
 	}
@@ -251,46 +255,46 @@ func (o *TaskTrackerAPI) initHandlerCache() {
 	}
 
 	if o.handlers == nil {
-		o.handlers = make(map[string]map[string]http.Handler)
+		o.handlers = make(map[string]map[string]middleware.Handler)
 	}
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/tasks/{id}/comments"] = tasks.NewAddCommentToTask(o.context, o.TasksAddCommentToTaskHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/tasks"] = tasks.NewCreateTask(o.context, o.TasksCreateTaskHandler)
 
 	if o.handlers["DELETE"] == nil {
-		o.handlers[strings.ToUpper("DELETE")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("DELETE")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["DELETE"]["/tasks/{id}"] = tasks.NewDeleteTask(o.context, o.TasksDeleteTaskHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/tasks/{id}/comments"] = tasks.NewGetTaskComments(o.context, o.TasksGetTaskCommentsHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/tasks/{id}"] = tasks.NewGetTaskDetails(o.context, o.TasksGetTaskDetailsHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/tasks"] = tasks.NewListTasks(o.context, o.TasksListTasksHandler)
 
 	if o.handlers["PUT"] == nil {
-		o.handlers[strings.ToUpper("PUT")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("PUT")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["PUT"]["/tasks/{id}"] = tasks.NewUpdateTask(o.context, o.TasksUpdateTaskHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/tasks/{id}/files"] = tasks.NewUploadTaskFile(o.context, o.TasksUploadTaskFileHandler)
 

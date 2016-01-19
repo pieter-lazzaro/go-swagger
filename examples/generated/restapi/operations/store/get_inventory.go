@@ -10,6 +10,7 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
 	"github.com/go-swagger/go-swagger/httpkit/validate"
 	"github.com/go-swagger/go-swagger/strfmt"
+	"golang.org/x/net/context"
 )
 
 // GetInventoryHandlerFunc turns a function with the right signature into a get inventory handler
@@ -26,7 +27,7 @@ type GetInventoryHandler interface {
 }
 
 // NewGetInventory creates a new http.Handler for the get inventory operation
-func NewGetInventory(ctx *middleware.Context, handler GetInventoryHandler) *GetInventory {
+func NewGetInventory(ctx *middleware.ApiContext, handler GetInventoryHandler) *GetInventory {
 	return &GetInventory{Context: ctx, Handler: handler}
 }
 
@@ -38,11 +39,11 @@ Returns a map of status codes to quantities
 
 */
 type GetInventory struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Handler GetInventoryHandler
 }
 
-func (o *GetInventory) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *GetInventory) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	uprinc, err := o.Context.Authorize(r, route)
 	if err != nil {

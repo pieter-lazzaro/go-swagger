@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // FindPetsByTagsHandlerFunc turns a function with the right signature into a find pets by tags handler
@@ -23,7 +24,7 @@ type FindPetsByTagsHandler interface {
 }
 
 // NewFindPetsByTags creates a new http.Handler for the find pets by tags operation
-func NewFindPetsByTags(ctx *middleware.Context, handler FindPetsByTagsHandler) *FindPetsByTags {
+func NewFindPetsByTags(ctx *middleware.ApiContext, handler FindPetsByTagsHandler) *FindPetsByTags {
 	return &FindPetsByTags{Context: ctx, Handler: handler}
 }
 
@@ -35,12 +36,12 @@ Muliple tags can be provided with comma seperated strings. Use tag1, tag2, tag3 
 
 */
 type FindPetsByTags struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  FindPetsByTagsParams
 	Handler FindPetsByTagsHandler
 }
 
-func (o *FindPetsByTags) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *FindPetsByTags) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewFindPetsByTagsParams()
 

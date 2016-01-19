@@ -1,8 +1,10 @@
 /*Package main Simple To Do List API
 
     Schemes:
-      http
       https
+      http
+    Host: localhost
+    BasePath: /
     Version: 0.1.0
 
     Consumes:

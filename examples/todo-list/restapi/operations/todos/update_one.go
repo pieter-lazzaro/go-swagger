@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdateOneHandlerFunc turns a function with the right signature into a update one handler
@@ -23,7 +24,7 @@ type UpdateOneHandler interface {
 }
 
 // NewUpdateOne creates a new http.Handler for the update one operation
-func NewUpdateOne(ctx *middleware.Context, handler UpdateOneHandler) *UpdateOne {
+func NewUpdateOne(ctx *middleware.ApiContext, handler UpdateOneHandler) *UpdateOne {
 	return &UpdateOne{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ UpdateOne update one API
 
 */
 type UpdateOne struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdateOneParams
 	Handler UpdateOneHandler
 }
 
-func (o *UpdateOne) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *UpdateOne) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewUpdateOneParams()
 

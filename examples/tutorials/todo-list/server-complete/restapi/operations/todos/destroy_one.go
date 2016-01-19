@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // DestroyOneHandlerFunc turns a function with the right signature into a destroy one handler
@@ -23,7 +24,7 @@ type DestroyOneHandler interface {
 }
 
 // NewDestroyOne creates a new http.Handler for the destroy one operation
-func NewDestroyOne(ctx *middleware.Context, handler DestroyOneHandler) *DestroyOne {
+func NewDestroyOne(ctx *middleware.ApiContext, handler DestroyOneHandler) *DestroyOne {
 	return &DestroyOne{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ DestroyOne destroy one API
 
 */
 type DestroyOne struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  DestroyOneParams
 	Handler DestroyOneHandler
 }
 
-func (o *DestroyOne) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *DestroyOne) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewDestroyOneParams()
 

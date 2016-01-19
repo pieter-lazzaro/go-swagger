@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // CreateTaskHandlerFunc turns a function with the right signature into a create task handler
@@ -23,7 +24,7 @@ type CreateTaskHandler interface {
 }
 
 // NewCreateTask creates a new http.Handler for the create task operation
-func NewCreateTask(ctx *middleware.Context, handler CreateTaskHandler) *CreateTask {
+func NewCreateTask(ctx *middleware.ApiContext, handler CreateTaskHandler) *CreateTask {
 	return &CreateTask{Context: ctx, Handler: handler}
 }
 
@@ -38,12 +39,12 @@ created the task.
 
 */
 type CreateTask struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  CreateTaskParams
 	Handler CreateTaskHandler
 }
 
-func (o *CreateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *CreateTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewCreateTaskParams()
 

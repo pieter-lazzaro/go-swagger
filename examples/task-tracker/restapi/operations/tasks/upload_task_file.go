@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UploadTaskFileHandlerFunc turns a function with the right signature into a upload task file handler
@@ -23,7 +24,7 @@ type UploadTaskFileHandler interface {
 }
 
 // NewUploadTaskFile creates a new http.Handler for the upload task file operation
-func NewUploadTaskFile(ctx *middleware.Context, handler UploadTaskFileHandler) *UploadTaskFile {
+func NewUploadTaskFile(ctx *middleware.ApiContext, handler UploadTaskFileHandler) *UploadTaskFile {
 	return &UploadTaskFile{Context: ctx, Handler: handler}
 }
 
@@ -35,12 +36,12 @@ The file can't be larger than **5MB**
 
 */
 type UploadTaskFile struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UploadTaskFileParams
 	Handler UploadTaskFileHandler
 }
 
-func (o *UploadTaskFile) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *UploadTaskFile) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewUploadTaskFileParams()
 

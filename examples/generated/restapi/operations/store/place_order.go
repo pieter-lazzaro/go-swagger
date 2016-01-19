@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // PlaceOrderHandlerFunc turns a function with the right signature into a place order handler
@@ -23,7 +24,7 @@ type PlaceOrderHandler interface {
 }
 
 // NewPlaceOrder creates a new http.Handler for the place order operation
-func NewPlaceOrder(ctx *middleware.Context, handler PlaceOrderHandler) *PlaceOrder {
+func NewPlaceOrder(ctx *middleware.ApiContext, handler PlaceOrderHandler) *PlaceOrder {
 	return &PlaceOrder{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Place an order for a pet
 
 */
 type PlaceOrder struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  PlaceOrderParams
 	Handler PlaceOrderHandler
 }
 
-func (o *PlaceOrder) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *PlaceOrder) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewPlaceOrderParams()
 

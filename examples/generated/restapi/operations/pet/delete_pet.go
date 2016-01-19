@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // DeletePetHandlerFunc turns a function with the right signature into a delete pet handler
@@ -23,7 +24,7 @@ type DeletePetHandler interface {
 }
 
 // NewDeletePet creates a new http.Handler for the delete pet operation
-func NewDeletePet(ctx *middleware.Context, handler DeletePetHandler) *DeletePet {
+func NewDeletePet(ctx *middleware.ApiContext, handler DeletePetHandler) *DeletePet {
 	return &DeletePet{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Deletes a pet
 
 */
 type DeletePet struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  DeletePetParams
 	Handler DeletePetHandler
 }
 
-func (o *DeletePet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *DeletePet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewDeletePetParams()
 

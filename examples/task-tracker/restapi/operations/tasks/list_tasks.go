@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // ListTasksHandlerFunc turns a function with the right signature into a list tasks handler
@@ -23,7 +24,7 @@ type ListTasksHandler interface {
 }
 
 // NewListTasks creates a new http.Handler for the list tasks operation
-func NewListTasks(ctx *middleware.Context, handler ListTasksHandler) *ListTasks {
+func NewListTasks(ctx *middleware.ApiContext, handler ListTasksHandler) *ListTasks {
 	return &ListTasks{Context: ctx, Handler: handler}
 }
 
@@ -39,12 +40,12 @@ to page through large result sets.
 
 */
 type ListTasks struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  ListTasksParams
 	Handler ListTasksHandler
 }
 
-func (o *ListTasks) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *ListTasks) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewListTasksParams()
 

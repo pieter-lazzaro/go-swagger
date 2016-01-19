@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdateTaskHandlerFunc turns a function with the right signature into a update task handler
@@ -23,7 +24,7 @@ type UpdateTaskHandler interface {
 }
 
 // NewUpdateTask creates a new http.Handler for the update task operation
-func NewUpdateTask(ctx *middleware.Context, handler UpdateTaskHandler) *UpdateTask {
+func NewUpdateTask(ctx *middleware.ApiContext, handler UpdateTaskHandler) *UpdateTask {
 	return &UpdateTask{Context: ctx, Handler: handler}
 }
 
@@ -38,12 +39,12 @@ last updated the task.
 
 */
 type UpdateTask struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdateTaskParams
 	Handler UpdateTaskHandler
 }
 
-func (o *UpdateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *UpdateTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewUpdateTaskParams()
 

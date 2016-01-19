@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // FindTodosHandlerFunc turns a function with the right signature into a find todos handler
@@ -23,7 +24,7 @@ type FindTodosHandler interface {
 }
 
 // NewFindTodos creates a new http.Handler for the find todos operation
-func NewFindTodos(ctx *middleware.Context, handler FindTodosHandler) *FindTodos {
+func NewFindTodos(ctx *middleware.ApiContext, handler FindTodosHandler) *FindTodos {
 	return &FindTodos{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ FindTodos find todos API
 
 */
 type FindTodos struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  FindTodosParams
 	Handler FindTodosHandler
 }
 
-func (o *FindTodos) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *FindTodos) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewFindTodosParams()
 

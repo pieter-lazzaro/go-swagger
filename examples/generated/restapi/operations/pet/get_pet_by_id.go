@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetPetByIDHandlerFunc turns a function with the right signature into a get pet by id handler
@@ -23,7 +24,7 @@ type GetPetByIDHandler interface {
 }
 
 // NewGetPetByID creates a new http.Handler for the get pet by id operation
-func NewGetPetByID(ctx *middleware.Context, handler GetPetByIDHandler) *GetPetByID {
+func NewGetPetByID(ctx *middleware.ApiContext, handler GetPetByIDHandler) *GetPetByID {
 	return &GetPetByID{Context: ctx, Handler: handler}
 }
 
@@ -35,12 +36,12 @@ Returns a single pet
 
 */
 type GetPetByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetPetByIDParams
 	Handler GetPetByIDHandler
 }
 
-func (o *GetPetByID) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *GetPetByID) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewGetPetByIDParams()
 

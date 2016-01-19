@@ -26,13 +26,14 @@ func configureAPI(api *operations.TodoListAPI) http.Handler {
 	})
 
 	api.ServerShutdown = func() {}
+	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
 }
 
 // The middleware configuration is for the handler executors. These do not apply to the swagger.json document.
 // The middleware executes after routing but before authentication, binding and validation
-func setupMiddlewares(handler http.Handler) http.Handler {
+func setupMiddlewares(handler middleware.Handler) middleware.Handler {
 	return handler
 }
 

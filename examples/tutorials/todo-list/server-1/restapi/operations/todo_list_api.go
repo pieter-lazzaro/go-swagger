@@ -12,6 +12,7 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-swagger/go-swagger/swag"
 
 	"github.com/go-swagger/go-swagger/examples/tutorials/todo-list/server-1/restapi/operations/todos"
 )
@@ -20,7 +21,7 @@ import (
 func NewTodoListAPI(spec *spec.Document) *TodoListAPI {
 	o := &TodoListAPI{
 		spec:            spec,
-		handlers:        make(map[string]map[string]http.Handler),
+		handlers:        make(map[string]map[string]middleware.Handler),
 		formats:         strfmt.Default,
 		defaultConsumes: "application/io.goswagger.examples.todo-list.v1+json",
 		defaultProduces: "application/io.goswagger.examples.todo-list.v1+json",
@@ -33,8 +34,8 @@ func NewTodoListAPI(spec *spec.Document) *TodoListAPI {
 /*TodoListAPI The product of a tutorial on goswagger.io */
 type TodoListAPI struct {
 	spec            *spec.Document
-	context         *middleware.Context
-	handlers        map[string]map[string]http.Handler
+	context         *middleware.ApiContext
+	handlers        map[string]map[string]middleware.Handler
 	formats         strfmt.Registry
 	defaultConsumes string
 	defaultProduces string
@@ -54,6 +55,9 @@ type TodoListAPI struct {
 	// ServerShutdown is called when the HTTP(S) server is shut down and done
 	// handling all active connections and does not accept connections any more
 	ServerShutdown func()
+
+	// Custom command line argument groups with their descriptions
+	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
 }
 
 // SetDefaultProduces sets the default produces media type
@@ -153,8 +157,8 @@ func (o *TodoListAPI) ProducersFor(mediaTypes []string) map[string]httpkit.Produ
 
 }
 
-// HandlerFor gets a http.Handler for the provided operation method and path
-func (o *TodoListAPI) HandlerFor(method, path string) (http.Handler, bool) {
+// HandlerFor gets a middleware.Handler for the provided operation method and path
+func (o *TodoListAPI) HandlerFor(method, path string) (middleware.Handler, bool) {
 	if o.handlers == nil {
 		return nil, false
 	}
@@ -172,11 +176,11 @@ func (o *TodoListAPI) initHandlerCache() {
 	}
 
 	if o.handlers == nil {
-		o.handlers = make(map[string]map[string]http.Handler)
+		o.handlers = make(map[string]map[string]middleware.Handler)
 	}
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/"] = todos.NewFindTodos(o.context, o.TodosFindTodosHandler)
 

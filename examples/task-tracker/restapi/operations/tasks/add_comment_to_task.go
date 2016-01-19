@@ -10,6 +10,7 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
 	"github.com/go-swagger/go-swagger/httpkit/validate"
 	"github.com/go-swagger/go-swagger/strfmt"
+	"golang.org/x/net/context"
 )
 
 // AddCommentToTaskHandlerFunc turns a function with the right signature into a add comment to task handler
@@ -26,7 +27,7 @@ type AddCommentToTaskHandler interface {
 }
 
 // NewAddCommentToTask creates a new http.Handler for the add comment to task operation
-func NewAddCommentToTask(ctx *middleware.Context, handler AddCommentToTaskHandler) *AddCommentToTask {
+func NewAddCommentToTask(ctx *middleware.ApiContext, handler AddCommentToTaskHandler) *AddCommentToTask {
 	return &AddCommentToTask{Context: ctx, Handler: handler}
 }
 
@@ -40,12 +41,12 @@ Fenced codeblocks etc are supported through pygments.
 
 */
 type AddCommentToTask struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  AddCommentToTaskParams
 	Handler AddCommentToTaskHandler
 }
 
-func (o *AddCommentToTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *AddCommentToTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewAddCommentToTaskParams()
 
@@ -114,7 +115,7 @@ func (o *AddCommentToTaskBody) Validate(formats strfmt.Registry) error {
 
 func (o *AddCommentToTaskBody) validateContent(formats strfmt.Registry) error {
 
-	if err := validate.Required("body"+"."+"content", "body", string(o.Content)); err != nil {
+	if err := validate.RequiredString("body"+"."+"content", "body", string(o.Content)); err != nil {
 		return err
 	}
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetUserByNameHandlerFunc turns a function with the right signature into a get user by name handler
@@ -23,7 +24,7 @@ type GetUserByNameHandler interface {
 }
 
 // NewGetUserByName creates a new http.Handler for the get user by name operation
-func NewGetUserByName(ctx *middleware.Context, handler GetUserByNameHandler) *GetUserByName {
+func NewGetUserByName(ctx *middleware.ApiContext, handler GetUserByNameHandler) *GetUserByName {
 	return &GetUserByName{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Get user by user name
 
 */
 type GetUserByName struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetUserByNameParams
 	Handler GetUserByNameHandler
 }
 
-func (o *GetUserByName) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *GetUserByName) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewGetUserByNameParams()
 

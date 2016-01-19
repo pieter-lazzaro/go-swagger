@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // CreateUsersWithListInputHandlerFunc turns a function with the right signature into a create users with list input handler
@@ -23,7 +24,7 @@ type CreateUsersWithListInputHandler interface {
 }
 
 // NewCreateUsersWithListInput creates a new http.Handler for the create users with list input operation
-func NewCreateUsersWithListInput(ctx *middleware.Context, handler CreateUsersWithListInputHandler) *CreateUsersWithListInput {
+func NewCreateUsersWithListInput(ctx *middleware.ApiContext, handler CreateUsersWithListInputHandler) *CreateUsersWithListInput {
 	return &CreateUsersWithListInput{Context: ctx, Handler: handler}
 }
 
@@ -33,12 +34,12 @@ Creates list of users with given input array
 
 */
 type CreateUsersWithListInput struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  CreateUsersWithListInputParams
 	Handler CreateUsersWithListInputHandler
 }
 
-func (o *CreateUsersWithListInput) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *CreateUsersWithListInput) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewCreateUsersWithListInputParams()
 

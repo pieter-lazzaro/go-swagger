@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetOrderByIDHandlerFunc turns a function with the right signature into a get order by id handler
@@ -23,7 +24,7 @@ type GetOrderByIDHandler interface {
 }
 
 // NewGetOrderByID creates a new http.Handler for the get order by id operation
-func NewGetOrderByID(ctx *middleware.Context, handler GetOrderByIDHandler) *GetOrderByID {
+func NewGetOrderByID(ctx *middleware.ApiContext, handler GetOrderByIDHandler) *GetOrderByID {
 	return &GetOrderByID{Context: ctx, Handler: handler}
 }
 
@@ -35,12 +36,12 @@ For valid response try integer IDs with value <= 5 or > 10. Other values will ge
 
 */
 type GetOrderByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetOrderByIDParams
 	Handler GetOrderByIDHandler
 }
 
-func (o *GetOrderByID) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+func (o *GetOrderByID) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route, _ := o.Context.RouteInfo(r)
 	o.Params = NewGetOrderByIDParams()
 
