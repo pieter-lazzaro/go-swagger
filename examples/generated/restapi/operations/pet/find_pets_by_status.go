@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // FindPetsByStatusHandlerFunc turns a function with the right signature into a find pets by status handler
@@ -23,7 +24,7 @@ type FindPetsByStatusHandler interface {
 }
 
 // NewFindPetsByStatus creates a new http.Handler for the find pets by status operation
-func NewFindPetsByStatus(ctx *middleware.Context, handler FindPetsByStatusHandler) *FindPetsByStatus {
+func NewFindPetsByStatus(ctx *middleware.ApiContext, handler FindPetsByStatusHandler) *FindPetsByStatus {
 	return &FindPetsByStatus{Context: ctx, Handler: handler}
 }
 
@@ -35,18 +36,18 @@ Multiple status values can be provided with comma seperated strings
 
 */
 type FindPetsByStatus struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  FindPetsByStatusParams
 	Handler FindPetsByStatusHandler
 }
 
-func (o *FindPetsByStatus) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *FindPetsByStatus) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewFindPetsByStatusParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -55,12 +56,12 @@ func (o *FindPetsByStatus) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

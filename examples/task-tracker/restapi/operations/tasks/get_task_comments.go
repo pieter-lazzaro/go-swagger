@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetTaskCommentsHandlerFunc turns a function with the right signature into a get task comments handler
@@ -23,7 +24,7 @@ type GetTaskCommentsHandler interface {
 }
 
 // NewGetTaskComments creates a new http.Handler for the get task comments operation
-func NewGetTaskComments(ctx *middleware.Context, handler GetTaskCommentsHandler) *GetTaskComments {
+func NewGetTaskComments(ctx *middleware.ApiContext, handler GetTaskCommentsHandler) *GetTaskComments {
 	return &GetTaskComments{Context: ctx, Handler: handler}
 }
 
@@ -36,22 +37,22 @@ The comments require a size parameter.
 
 */
 type GetTaskComments struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetTaskCommentsParams
 	Handler GetTaskCommentsHandler
 }
 
-func (o *GetTaskComments) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *GetTaskComments) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewGetTaskCommentsParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

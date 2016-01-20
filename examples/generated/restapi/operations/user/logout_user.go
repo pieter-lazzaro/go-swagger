@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // LogoutUserHandlerFunc turns a function with the right signature into a logout user handler
@@ -23,7 +24,7 @@ type LogoutUserHandler interface {
 }
 
 // NewLogoutUser creates a new http.Handler for the logout user operation
-func NewLogoutUser(ctx *middleware.Context, handler LogoutUserHandler) *LogoutUser {
+func NewLogoutUser(ctx *middleware.ApiContext, handler LogoutUserHandler) *LogoutUser {
 	return &LogoutUser{Context: ctx, Handler: handler}
 }
 
@@ -33,20 +34,20 @@ Logs out current logged in user session
 
 */
 type LogoutUser struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Handler LogoutUserHandler
 }
 
-func (o *LogoutUser) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *LogoutUser) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 
 	if err := o.Context.BindValidRequest(r, route, nil); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle() // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // CreateUserHandlerFunc turns a function with the right signature into a create user handler
@@ -23,7 +24,7 @@ type CreateUserHandler interface {
 }
 
 // NewCreateUser creates a new http.Handler for the create user operation
-func NewCreateUser(ctx *middleware.Context, handler CreateUserHandler) *CreateUser {
+func NewCreateUser(ctx *middleware.ApiContext, handler CreateUserHandler) *CreateUser {
 	return &CreateUser{Context: ctx, Handler: handler}
 }
 
@@ -35,22 +36,22 @@ This can only be done by the logged in user.
 
 */
 type CreateUser struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  CreateUserParams
 	Handler CreateUserHandler
 }
 
-func (o *CreateUser) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *CreateUser) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewCreateUserParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

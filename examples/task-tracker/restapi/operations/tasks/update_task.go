@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdateTaskHandlerFunc turns a function with the right signature into a update task handler
@@ -23,7 +24,7 @@ type UpdateTaskHandler interface {
 }
 
 // NewUpdateTask creates a new http.Handler for the update task operation
-func NewUpdateTask(ctx *middleware.Context, handler UpdateTaskHandler) *UpdateTask {
+func NewUpdateTask(ctx *middleware.ApiContext, handler UpdateTaskHandler) *UpdateTask {
 	return &UpdateTask{Context: ctx, Handler: handler}
 }
 
@@ -38,18 +39,18 @@ last updated the task.
 
 */
 type UpdateTask struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdateTaskParams
 	Handler UpdateTaskHandler
 }
 
-func (o *UpdateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *UpdateTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewUpdateTaskParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -58,12 +59,12 @@ func (o *UpdateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // DeleteUserHandlerFunc turns a function with the right signature into a delete user handler
@@ -23,7 +24,7 @@ type DeleteUserHandler interface {
 }
 
 // NewDeleteUser creates a new http.Handler for the delete user operation
-func NewDeleteUser(ctx *middleware.Context, handler DeleteUserHandler) *DeleteUser {
+func NewDeleteUser(ctx *middleware.ApiContext, handler DeleteUserHandler) *DeleteUser {
 	return &DeleteUser{Context: ctx, Handler: handler}
 }
 
@@ -35,22 +36,22 @@ This can only be done by the logged in user.
 
 */
 type DeleteUser struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  DeleteUserParams
 	Handler DeleteUserHandler
 }
 
-func (o *DeleteUser) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *DeleteUser) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewDeleteUserParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

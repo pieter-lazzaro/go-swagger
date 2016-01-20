@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // GetPetByIDHandlerFunc turns a function with the right signature into a get pet by id handler
@@ -23,7 +24,7 @@ type GetPetByIDHandler interface {
 }
 
 // NewGetPetByID creates a new http.Handler for the get pet by id operation
-func NewGetPetByID(ctx *middleware.Context, handler GetPetByIDHandler) *GetPetByID {
+func NewGetPetByID(ctx *middleware.ApiContext, handler GetPetByIDHandler) *GetPetByID {
 	return &GetPetByID{Context: ctx, Handler: handler}
 }
 
@@ -35,18 +36,18 @@ Returns a single pet
 
 */
 type GetPetByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  GetPetByIDParams
 	Handler GetPetByIDHandler
 }
 
-func (o *GetPetByID) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *GetPetByID) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewGetPetByIDParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -55,12 +56,12 @@ func (o *GetPetByID) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

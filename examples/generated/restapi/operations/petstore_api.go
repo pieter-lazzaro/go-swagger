@@ -13,6 +13,7 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/security"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-swagger/go-swagger/swag"
 
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations/pet"
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations/store"
@@ -23,9 +24,9 @@ import (
 func NewPetstoreAPI(spec *spec.Document) *PetstoreAPI {
 	o := &PetstoreAPI{
 		spec:            spec,
-		handlers:        make(map[string]map[string]http.Handler),
+		handlers:        make(map[string]map[string]middleware.Handler),
 		formats:         strfmt.Default,
-		defaultConsumes: "application/xml",
+		defaultConsumes: "application/json",
 		defaultProduces: "application/xml",
 		ServerShutdown:  func() {},
 	}
@@ -36,8 +37,8 @@ func NewPetstoreAPI(spec *spec.Document) *PetstoreAPI {
 /*PetstoreAPI This is a sample server Petstore server.  You can find out more about Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For this sample, you can use the api key `special-key` to test the authorization filters. */
 type PetstoreAPI struct {
 	spec            *spec.Document
-	context         *middleware.Context
-	handlers        map[string]map[string]http.Handler
+	context         *middleware.ApiContext
+	handlers        map[string]map[string]middleware.Handler
 	formats         strfmt.Registry
 	defaultConsumes string
 	defaultProduces string
@@ -46,10 +47,10 @@ type PetstoreAPI struct {
 	// XMLConsumer registers a consumer for a "application/xml" mime type
 	XMLConsumer httpkit.Consumer
 
-	// JSONProducer registers a producer for a "application/json" mime type
-	JSONProducer httpkit.Producer
 	// XMLProducer registers a producer for a "application/xml" mime type
 	XMLProducer httpkit.Producer
+	// JSONProducer registers a producer for a "application/json" mime type
+	JSONProducer httpkit.Producer
 
 	// APIKeyAuth registers a function that takes a token and returns a principal
 	// it performs authentication based on an api key api_key provided in the header
@@ -103,6 +104,9 @@ type PetstoreAPI struct {
 	// ServerShutdown is called when the HTTP(S) server is shut down and done
 	// handling all active connections and does not accept connections any more
 	ServerShutdown func()
+
+	// Custom command line argument groups with their descriptions
+	CommandLineOptionsGroups []swag.CommandLineOptionsGroup
 }
 
 // SetDefaultProduces sets the default produces media type
@@ -147,12 +151,12 @@ func (o *PetstoreAPI) Validate() error {
 		unregistered = append(unregistered, "XMLConsumer")
 	}
 
-	if o.JSONProducer == nil {
-		unregistered = append(unregistered, "JSONProducer")
-	}
-
 	if o.XMLProducer == nil {
 		unregistered = append(unregistered, "XMLProducer")
+	}
+
+	if o.JSONProducer == nil {
+		unregistered = append(unregistered, "JSONProducer")
 	}
 
 	if o.APIKeyAuth == nil {
@@ -294,11 +298,11 @@ func (o *PetstoreAPI) ProducersFor(mediaTypes []string) map[string]httpkit.Produ
 	for _, mt := range mediaTypes {
 		switch mt {
 
-		case "application/json":
-			result["application/json"] = o.JSONProducer
-
 		case "application/xml":
 			result["application/xml"] = o.XMLProducer
+
+		case "application/json":
+			result["application/json"] = o.JSONProducer
 
 		}
 	}
@@ -306,8 +310,8 @@ func (o *PetstoreAPI) ProducersFor(mediaTypes []string) map[string]httpkit.Produ
 
 }
 
-// HandlerFor gets a http.Handler for the provided operation method and path
-func (o *PetstoreAPI) HandlerFor(method, path string) (http.Handler, bool) {
+// HandlerFor gets a middleware.Handler for the provided operation method and path
+func (o *PetstoreAPI) HandlerFor(method, path string) (middleware.Handler, bool) {
 	if o.handlers == nil {
 		return nil, false
 	}
@@ -325,106 +329,106 @@ func (o *PetstoreAPI) initHandlerCache() {
 	}
 
 	if o.handlers == nil {
-		o.handlers = make(map[string]map[string]http.Handler)
+		o.handlers = make(map[string]map[string]middleware.Handler)
 	}
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/pet"] = pet.NewAddPet(o.context, o.PetAddPetHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/user"] = user.NewCreateUser(o.context, o.UserCreateUserHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/user/createWithArray"] = user.NewCreateUsersWithArrayInput(o.context, o.UserCreateUsersWithArrayInputHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/user/createWithList"] = user.NewCreateUsersWithListInput(o.context, o.UserCreateUsersWithListInputHandler)
 
 	if o.handlers["DELETE"] == nil {
-		o.handlers[strings.ToUpper("DELETE")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("DELETE")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["DELETE"]["/store/order/{orderId}"] = store.NewDeleteOrder(o.context, o.StoreDeleteOrderHandler)
 
 	if o.handlers["DELETE"] == nil {
-		o.handlers[strings.ToUpper("DELETE")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("DELETE")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["DELETE"]["/pet/{petId}"] = pet.NewDeletePet(o.context, o.PetDeletePetHandler)
 
 	if o.handlers["DELETE"] == nil {
-		o.handlers[strings.ToUpper("DELETE")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("DELETE")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["DELETE"]["/user/{username}"] = user.NewDeleteUser(o.context, o.UserDeleteUserHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/pet/findByStatus"] = pet.NewFindPetsByStatus(o.context, o.PetFindPetsByStatusHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/pet/findByTags"] = pet.NewFindPetsByTags(o.context, o.PetFindPetsByTagsHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/store/inventory"] = store.NewGetInventory(o.context, o.StoreGetInventoryHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/store/order/{orderId}"] = store.NewGetOrderByID(o.context, o.StoreGetOrderByIDHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/pet/{petId}"] = pet.NewGetPetByID(o.context, o.PetGetPetByIDHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/user/{username}"] = user.NewGetUserByName(o.context, o.UserGetUserByNameHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/user/login"] = user.NewLoginUser(o.context, o.UserLoginUserHandler)
 
 	if o.handlers["GET"] == nil {
-		o.handlers[strings.ToUpper("GET")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("GET")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["GET"]["/user/logout"] = user.NewLogoutUser(o.context, o.UserLogoutUserHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/store/order"] = store.NewPlaceOrder(o.context, o.StorePlaceOrderHandler)
 
 	if o.handlers["PUT"] == nil {
-		o.handlers[strings.ToUpper("PUT")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("PUT")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["PUT"]["/pet"] = pet.NewUpdatePet(o.context, o.PetUpdatePetHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/pet/{petId}"] = pet.NewUpdatePetWithForm(o.context, o.PetUpdatePetWithFormHandler)
 
 	if o.handlers["PUT"] == nil {
-		o.handlers[strings.ToUpper("PUT")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("PUT")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["PUT"]["/user/{username}"] = user.NewUpdateUser(o.context, o.UserUpdateUserHandler)
 
 	if o.handlers["POST"] == nil {
-		o.handlers[strings.ToUpper("POST")] = make(map[string]http.Handler)
+		o.handlers[strings.ToUpper("POST")] = make(map[string]middleware.Handler)
 	}
 	o.handlers["POST"]["/pet/{petId}/uploadImage"] = pet.NewUploadFile(o.context, o.PetUploadFileHandler)
 

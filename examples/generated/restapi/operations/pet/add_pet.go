@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // AddPetHandlerFunc turns a function with the right signature into a add pet handler
@@ -23,7 +24,7 @@ type AddPetHandler interface {
 }
 
 // NewAddPet creates a new http.Handler for the add pet operation
-func NewAddPet(ctx *middleware.Context, handler AddPetHandler) *AddPet {
+func NewAddPet(ctx *middleware.ApiContext, handler AddPetHandler) *AddPet {
 	return &AddPet{Context: ctx, Handler: handler}
 }
 
@@ -33,18 +34,18 @@ Add a new pet to the store
 
 */
 type AddPet struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  AddPetParams
 	Handler AddPetHandler
 }
 
-func (o *AddPet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *AddPet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewAddPetParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -53,12 +54,12 @@ func (o *AddPet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

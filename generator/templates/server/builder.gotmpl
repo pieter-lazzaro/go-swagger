@@ -23,7 +23,7 @@ import (
 func New{{ pascalize .Name }}API(spec *spec.Document) *{{ pascalize .Name }}API {
   {{.ReceiverName}} := &{{ pascalize .Name }}API{
     spec:     spec,
-    handlers: make(map[string]map[string]http.Handler),
+    handlers: make(map[string]map[string]middleware.Handler),
     formats:  strfmt.Default,
     defaultConsumes: "{{ .DefaultConsumes }}",
     defaultProduces: "{{ .DefaultProduces }}",
@@ -36,8 +36,8 @@ func New{{ pascalize .Name }}API(spec *spec.Document) *{{ pascalize .Name }}API 
 /*{{ pascalize .Name }}API {{ if .Info }}{{ if .Info.Description }}{{.Info.Description}}{{ else }}the {{ humanize .Name }} API{{ end }}{{ end }} */
 type {{ pascalize .Name }}API struct {
   spec            *spec.Document
-  context         *middleware.Context
-  handlers        map[string]map[string]http.Handler
+  context         *middleware.ApiContext
+  handlers        map[string]map[string]middleware.Handler
   formats         strfmt.Registry
   defaultConsumes string
   defaultProduces string
@@ -194,8 +194,8 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}API) ProducersFor(mediaTypes []str
   {{end}}
 }
 
-// HandlerFor gets a http.Handler for the provided operation method and path
-func ({{.ReceiverName}} *{{ pascalize .Name }}API) HandlerFor(method, path string) (http.Handler, bool) {
+// HandlerFor gets a middleware.Handler for the provided operation method and path
+func ({{.ReceiverName}} *{{ pascalize .Name }}API) HandlerFor(method, path string) (middleware.Handler, bool) {
   if {{.ReceiverName}}.handlers == nil {
     return nil, false
   }
@@ -213,11 +213,11 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}API) initHandlerCache() {
   }
   {{if .Operations}}
   if {{ .ReceiverName }}.handlers == nil {
-    {{.ReceiverName}}.handlers = make(map[string]map[string]http.Handler)
+    {{.ReceiverName}}.handlers = make(map[string]map[string]middleware.Handler)
   }
   {{range .Operations}}
   if {{ .ReceiverName }}.handlers[{{ printf "%q" (upper .Method) }}] == nil {
-    {{ .ReceiverName }}.handlers[strings.ToUpper({{ printf "%q" (upper .Method) }})] = make(map[string]http.Handler)
+    {{ .ReceiverName }}.handlers[strings.ToUpper({{ printf "%q" (upper .Method) }})] = make(map[string]middleware.Handler)
   }
   {{.ReceiverName}}.handlers[{{ printf "%q" (upper .Method) }}][{{ printf "%q" .Path }}] = {{if ne .Package $package}}{{.Package}}.{{end}}New{{ pascalize .Name }}({{.ReceiverName}}.context, {{.ReceiverName}}.{{if ne .Package $package}}{{ pascalize .Package }}{{end}}{{ pascalize .Name }}Handler)
   {{end}}

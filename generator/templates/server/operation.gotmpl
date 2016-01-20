@@ -5,7 +5,7 @@ package {{ .Package }}
 
 import (
   "net/http"
-
+  "golang.org/x/net/context"
   "github.com/go-swagger/go-swagger/httpkit/middleware"
   {{ range .DefaultImports }}{{ printf "%q" . }}
   {{ end }}
@@ -27,7 +27,7 @@ type {{ pascalize .Name }}Handler interface {
 }
 
 // New{{ pascalize .Name }} creates a new http.Handler for the {{ humanize .Name }} operation
-func New{{ pascalize .Name }}(ctx *middleware.Context, handler {{ pascalize .Name }}Handler) *{{ pascalize .Name }} {
+func New{{ pascalize .Name }}(ctx *middleware.ApiContext, handler {{ pascalize .Name }}Handler) *{{ pascalize .Name }} {
   return &{{ pascalize .Name }}{Context: ctx, Handler: handler}
 }
 
@@ -39,18 +39,18 @@ func New{{ pascalize .Name }}(ctx *middleware.Context, handler {{ pascalize .Nam
 
 */
 type {{ pascalize .Name }} struct {
-  Context *middleware.Context
+  Context *middleware.ApiContext
   {{ if .Params }}Params  {{ pascalize .Name }}Params
   {{ end }}Handler {{ pascalize .Name }}Handler
 }
 
-func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-  route, _ := {{ .ReceiverName }}.Context.RouteInfo(r){{ if .Params }}
+func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+  route := middleware.MatchedRouteFromContext(ctx){{ if .Params }}
   {{ .ReceiverName }}.Params = New{{ pascalize .Name }}Params()
   {{ end }}
-  {{ if .Authorized }}uprinc, err := {{ .ReceiverName }}.Context.Authorize(r, route)
+  {{ if .Authorized }}uprinc, err := {{ .ReceiverName }}.Context.Authorize(ctx, r, route)
   if err != nil {
-    {{ .ReceiverName }}.Context.Respond(rw, r, route.Produces, route, err)
+    {{ .ReceiverName }}.Context.Respond(ctx, rw, r, route.Produces, route, err)
     return
   }
   var principal {{ if not (eq .Principal "interface{}") }}*{{ end }}{{ .Principal }}
@@ -60,7 +60,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(rw http.ResponseWrit
 
   {{ end }}
   if err := {{ .ReceiverName }}.Context.BindValidRequest(r, route, {{ if .Params }}&{{ .ReceiverName }}.Params{{ else }}nil{{ end }}); err != nil { // bind params
-    {{ .ReceiverName }}.Context.Respond(rw, r, route.Produces, route, err)
+    {{ .ReceiverName }}.Context.Respond(ctx, rw, r, route.Produces, route, err)
     return
   }
 
@@ -69,7 +69,7 @@ func ({{ .ReceiverName }} *{{ pascalize .Name }}) ServeHTTP(rw http.ResponseWrit
   {{else}}
   res := {{ .ReceiverName }}.Handler.Handle({{ if .Params }}{{ .ReceiverName }}.Params{{ end }}) // actually handle the request
   {{ end }}
-  {{ .ReceiverName }}.Context.Respond(rw, r, route.Produces, route, res)
+  {{ .ReceiverName }}.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }
 

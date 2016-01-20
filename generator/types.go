@@ -133,6 +133,7 @@ var typeMapping = map[string]string{
 	"float":      "float32",
 	"double":     "float64",
 	"number":     "float64",
+    "decimal":    "decimal.Decimal",
 	"integer":    "int64",
 	"boolean":    "bool",
 	"file":       "httpkit.File",

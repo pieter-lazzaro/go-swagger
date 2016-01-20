@@ -78,7 +78,7 @@ func (o *FindPetsByStatusParams) bindStatus(rawData []string, hasKey bool, forma
 	var ir []string
 	iValidateElement := func(i int, statusI string) *errors.Validation {
 
-		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", o.Status[i], []interface{}{"available", "pending", "sold"}); err != nil {
+		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", statusI, []interface{}{"available", "pending", "sold"}); err != nil {
 			return err
 		}
 

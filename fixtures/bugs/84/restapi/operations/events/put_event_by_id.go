@@ -23,7 +23,7 @@ type PutEventByIDHandler interface {
 }
 
 // NewPutEventByID creates a new http.Handler for the put event by id operation
-func NewPutEventByID(ctx *middleware.Context, handler PutEventByIDHandler) *PutEventByID {
+func NewPutEventByID(ctx *middleware.ApiContext, handler PutEventByIDHandler) *PutEventByID {
 	return &PutEventByID{Context: ctx, Handler: handler}
 }
 
@@ -33,7 +33,7 @@ Update existing event.
 
 */
 type PutEventByID struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  PutEventByIDParams
 	Handler PutEventByIDHandler
 }

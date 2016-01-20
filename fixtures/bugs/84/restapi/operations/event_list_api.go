@@ -33,7 +33,7 @@ func NewEventListAPI(spec *spec.Document) *EventListAPI {
  */
 type EventListAPI struct {
 	spec            *spec.Document
-	context         *middleware.Context
+	context         *middleware.ApiContext
 	handlers        map[string]map[string]http.Handler
 	formats         strfmt.Registry
 	defaultConsumes string

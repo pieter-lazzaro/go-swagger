@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdateUserHandlerFunc turns a function with the right signature into a update user handler
@@ -23,7 +24,7 @@ type UpdateUserHandler interface {
 }
 
 // NewUpdateUser creates a new http.Handler for the update user operation
-func NewUpdateUser(ctx *middleware.Context, handler UpdateUserHandler) *UpdateUser {
+func NewUpdateUser(ctx *middleware.ApiContext, handler UpdateUserHandler) *UpdateUser {
 	return &UpdateUser{Context: ctx, Handler: handler}
 }
 
@@ -35,22 +36,22 @@ This can only be done by the logged in user.
 
 */
 type UpdateUser struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdateUserParams
 	Handler UpdateUserHandler
 }
 
-func (o *UpdateUser) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *UpdateUser) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewUpdateUserParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

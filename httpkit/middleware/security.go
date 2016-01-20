@@ -14,21 +14,26 @@
 
 package middleware
 
-import "net/http"
+import (
+	"net/http"
 
-func newSecureAPI(ctx *Context, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		route, _ := ctx.RouteInfo(r)
+	"golang.org/x/net/context"
+)
+
+func newSecureAPI(ctx *ApiContext, next Handler) Handler {
+	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
+		route := MatchedRouteFromContext(rCtx)
+
 		if len(route.Authenticators) == 0 {
-			next.ServeHTTP(rw, r)
+			next.ServeHTTP(rCtx, rw, r)
 			return
 		}
 
-		if _, err := ctx.Authorize(r, route); err != nil {
-			ctx.Respond(rw, r, route.Produces, route, err)
+		if _, err := ctx.Authorize(rCtx, r, route); err != nil {
+			ctx.Respond(rCtx, rw, r, route.Produces, route, err)
 			return
 		}
 
-		next.ServeHTTP(rw, r)
+		next.ServeHTTP(rCtx, rw, r)
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdatePetWithFormHandlerFunc turns a function with the right signature into a update pet with form handler
@@ -23,7 +24,7 @@ type UpdatePetWithFormHandler interface {
 }
 
 // NewUpdatePetWithForm creates a new http.Handler for the update pet with form operation
-func NewUpdatePetWithForm(ctx *middleware.Context, handler UpdatePetWithFormHandler) *UpdatePetWithForm {
+func NewUpdatePetWithForm(ctx *middleware.ApiContext, handler UpdatePetWithFormHandler) *UpdatePetWithForm {
 	return &UpdatePetWithForm{Context: ctx, Handler: handler}
 }
 
@@ -33,18 +34,18 @@ Updates a pet in the store with form data
 
 */
 type UpdatePetWithForm struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdatePetWithFormParams
 	Handler UpdatePetWithFormHandler
 }
 
-func (o *UpdatePetWithForm) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *UpdatePetWithForm) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewUpdatePetWithFormParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -53,12 +54,12 @@ func (o *UpdatePetWithForm) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

@@ -23,14 +23,24 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/middleware/untyped"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/go-swagger/go-swagger/strfmt"
-	"github.com/gorilla/context"
+	netContext "golang.org/x/net/context"
 )
 
 // A Builder can create middlewares
-type Builder func(http.Handler) http.Handler
+type Builder func(Handler) Handler
+
+type HandlerFunc func(netContext.Context, http.ResponseWriter, *http.Request)
+
+func (h HandlerFunc) ServeHTTP(ctx netContext.Context, w http.ResponseWriter, r *http.Request) {
+	h(ctx, w, r)
+}
+
+type Handler interface {
+	ServeHTTP(netContext.Context, http.ResponseWriter, *http.Request)
+}
 
 // PassthroughBuilder returns the handler, aka the builder identity function
-func PassthroughBuilder(handler http.Handler) http.Handler { return handler }
+func PassthroughBuilder(handler Handler) Handler { return handler }
 
 // RequestBinder is an interface for types to implement
 // when they want to be able to bind from a request
@@ -46,7 +56,7 @@ type Responder interface {
 
 // Context is a type safe wrapper around an untyped request context
 // used throughout to store request context with the gorilla context module
-type Context struct {
+type ApiContext struct {
 	spec    *spec.Document
 	api     RoutableAPI
 	router  Router
@@ -55,13 +65,13 @@ type Context struct {
 
 type routableUntypedAPI struct {
 	api             *untyped.API
-	handlers        map[string]map[string]http.Handler
+	handlers        map[string]map[string]Handler
 	defaultConsumes string
 	defaultProduces string
 }
 
-func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *Context) *routableUntypedAPI {
-	var handlers map[string]map[string]http.Handler
+func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *ApiContext) *routableUntypedAPI {
+	var handlers map[string]map[string]Handler
 	if spec == nil || api == nil {
 		return nil
 	}
@@ -72,20 +82,20 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *Conte
 
 			if oh, ok := api.OperationHandlerFor(method, path); ok {
 				if handlers == nil {
-					handlers = make(map[string]map[string]http.Handler)
+					handlers = make(map[string]map[string]Handler)
 				}
 				if b, ok := handlers[um]; !ok || b == nil {
-					handlers[um] = make(map[string]http.Handler)
+					handlers[um] = make(map[string]Handler)
 				}
 
-				handlers[um][path] = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handlers[um][path] = HandlerFunc(func(rCtx netContext.Context, w http.ResponseWriter, r *http.Request) {
 					// lookup route info in the context
-					route, _ := context.RouteInfo(r)
+					route := MatchedRouteFromContext(rCtx)
 
 					// bind and validate the request using reflection
-					bound, validation := context.BindAndValidate(r, route)
+					bound, validation := context.BindAndValidate(rCtx, r, route)
 					if validation != nil {
-						context.Respond(w, r, route.Produces, route, validation)
+						context.Respond(rCtx, w, r, route.Produces, route, validation)
 						return
 					}
 
@@ -93,12 +103,12 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *Conte
 					result, err := oh.Handle(bound)
 					if err != nil {
 						// respond with failure
-						context.Respond(w, r, route.Produces, route, err)
+						context.Respond(rCtx, w, r, route.Produces, route, err)
 						return
 					}
 
 					// respond with success
-					context.Respond(w, r, route.Produces, route, result)
+					context.Respond(rCtx, w, r, route.Produces, route, result)
 				})
 
 				if len(schemes) > 0 {
@@ -116,7 +126,7 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *Conte
 	}
 }
 
-func (r *routableUntypedAPI) HandlerFor(method, path string) (http.Handler, bool) {
+func (r *routableUntypedAPI) HandlerFor(method, path string) (Handler, bool) {
 	paths, ok := r.handlers[strings.ToUpper(method)]
 	if !ok {
 		return nil, false
@@ -149,14 +159,14 @@ func (r *routableUntypedAPI) DefaultConsumes() string {
 }
 
 // NewRoutableContext creates a new context for a routable API
-func NewRoutableContext(spec *spec.Document, routableAPI RoutableAPI, routes Router) *Context {
-	ctx := &Context{spec: spec, api: routableAPI}
+func NewRoutableContext(spec *spec.Document, routableAPI RoutableAPI, routes Router) *ApiContext {
+	ctx := &ApiContext{spec: spec, api: routableAPI}
 	return ctx
 }
 
 // NewContext creates a new context wrapper
-func NewContext(spec *spec.Document, api *untyped.API, routes Router) *Context {
-	ctx := &Context{spec: spec}
+func NewContext(spec *spec.Document, api *untyped.API, routes Router) *ApiContext {
+	ctx := &ApiContext{spec: spec}
 	ctx.api = newRoutableUntypedAPI(spec, api, ctx)
 	return ctx
 }
@@ -190,21 +200,22 @@ const (
 type contentTypeValue struct {
 	MediaType string
 	Charset   string
+	Err       error
 }
 
 // BasePath returns the base path for this API
-func (c *Context) BasePath() string {
+func (c *ApiContext) BasePath() string {
 	return c.spec.BasePath()
 }
 
 // RequiredProduces returns the accepted content types for responses
-func (c *Context) RequiredProduces() []string {
+func (c *ApiContext) RequiredProduces() []string {
 	return c.spec.RequiredProduces()
 }
 
 // BindValidRequest binds a params object to a request but only when the request is valid
 // if the request is not valid an error will be returned
-func (c *Context) BindValidRequest(request *http.Request, route *MatchedRoute, binder RequestBinder) error {
+func (c *ApiContext) BindValidRequest(request *http.Request, route *MatchedRoute, binder RequestBinder) error {
 	var res []error
 
 	// check and validate content type, select consumer
@@ -242,114 +253,155 @@ func (c *Context) BindValidRequest(request *http.Request, route *MatchedRoute, b
 	return nil
 }
 
-// ContentType gets the parsed value of a content type
-func (c *Context) ContentType(request *http.Request) (string, string, *errors.ParseError) {
-	if v, ok := context.GetOk(request, ctxContentType); ok {
-		if val, ok := v.(*contentTypeValue); ok {
-			return val.MediaType, val.Charset, nil
-		}
-	}
+func NewContextWithContentType(ctx netContext.Context, request *http.Request) netContext.Context {
 
 	mt, cs, err := httpkit.ContentType(request.Header)
 	if err != nil {
-		return "", "", err
+		return netContext.WithValue(ctx, ctxContentType, &contentTypeValue{"", "", err})
 	}
-	context.Set(request, ctxContentType, &contentTypeValue{mt, cs})
-	return mt, cs, nil
+
+	return netContext.WithValue(ctx, ctxContentType, &contentTypeValue{mt, cs, nil})
+}
+
+func ContentTypeFromContext(ctx netContext.Context) *contentTypeValue {
+	if v, ok := ctx.Value(ctxContentType).(*contentTypeValue); ok {
+		return v
+	}
+
+	return nil
 }
 
 // LookupRoute looks a route up and returns true when it is found
-func (c *Context) LookupRoute(request *http.Request) (*MatchedRoute, bool) {
+func (c *ApiContext) LookupRoute(request *http.Request) (*MatchedRoute, bool) {
 	if route, ok := c.router.Lookup(request.Method, request.URL.Path); ok {
 		return route, ok
 	}
 	return nil, false
 }
 
-// RouteInfo tries to match a route for this request
-func (c *Context) RouteInfo(request *http.Request) (*MatchedRoute, bool) {
-	if v, ok := context.GetOk(request, ctxMatchedRoute); ok {
-		if val, ok := v.(*MatchedRoute); ok {
-			return val, ok
-		}
-	}
-
-	if route, ok := c.LookupRoute(request); ok {
-		context.Set(request, ctxMatchedRoute, route)
-		return route, ok
-	}
-
-	return nil, false
+func NewContextWithMatchedRoute(ctx netContext.Context, route *MatchedRoute) netContext.Context {
+	return netContext.WithValue(ctx, ctxMatchedRoute, route)
 }
 
-// ResponseFormat negotiates the response content type
-func (c *Context) ResponseFormat(r *http.Request, offers []string) string {
-	if v, ok := context.GetOk(r, ctxResponseFormat); ok {
-		if val, ok := v.(string); ok {
-			return val
-		}
+func MatchedRouteFromContext(ctx netContext.Context) *MatchedRoute {
+	if v, ok := ctx.Value(ctxMatchedRoute).(*MatchedRoute); ok {
+		return v
 	}
 
-	format := NegotiateContentType(r, offers, "")
-	if format != "" {
-		context.Set(r, ctxResponseFormat, format)
+	return nil
+}
+
+func (c *ApiContext) NewRequestContext(r *http.Request) netContext.Context {
+	ctx := netContext.TODO()
+
+	ctx = NewContextWithContentType(ctx, r)
+
+	if route, ok := c.LookupRoute(r); ok {
+
+		ctx = NewContextWithMatchedRoute(ctx, route)
+
+		ctx = NewContextWithSecurityPrincipal(ctx, r, route)
+
+		ctx = NewContextWithResponseFormat(ctx, route, r)
+
+		ctx = NewContextWithBoundParams(ctx, r, route)
 	}
-	return format
+
+	return ctx
+}
+
+func NewContextWithResponseFormat(ctx netContext.Context, route *MatchedRoute, request *http.Request) netContext.Context {
+
+	if format := NegotiateContentType(request, route.Produces, ""); format != "" {
+		return netContext.WithValue(ctx, ctxResponseFormat, format)
+	}
+	return ctx
+}
+
+func ResponseFormatFromContext(ctx netContext.Context) string {
+
+	if v, ok := ctx.Value(ctxResponseFormat).(string); ok {
+		return v
+	}
+
+	return ""
 }
 
 // AllowedMethods gets the allowed methods for the path of this request
-func (c *Context) AllowedMethods(request *http.Request) []string {
+func (c *ApiContext) AllowedMethods(request *http.Request) []string {
 	return c.router.OtherMethods(request.Method, request.URL.Path)
 }
 
-// Authorize authorizes the request
-func (c *Context) Authorize(request *http.Request, route *MatchedRoute) (interface{}, error) {
+func NewContextWithSecurityPrincipal(ctx netContext.Context, request *http.Request, route *MatchedRoute) netContext.Context {
+
 	if len(route.Authenticators) == 0 {
-		return nil, nil
-	}
-	if v, ok := context.GetOk(request, ctxSecurityPrincipal); ok {
-		return v, nil
+		return ctx
 	}
 
 	for _, authenticator := range route.Authenticators {
 		applies, usr, err := authenticator.Authenticate(request)
+
 		if !applies || err != nil || usr == nil {
 			continue
 		}
-		context.Set(request, ctxSecurityPrincipal, usr)
-		return usr, nil
+		return netContext.WithValue(ctx, ctxSecurityPrincipal, usr)
 	}
 
-	return nil, errors.Unauthenticated("invalid credentials")
+	return ctx
+}
+
+func SecurityPrincipalFromContext(ctx netContext.Context) interface{} {
+	return ctx.Value(ctxSecurityPrincipal)
+}
+
+// Authorize authorizes the request byt checking if a security principal is needed and has been set
+func (c *ApiContext) Authorize(ctx netContext.Context, request *http.Request, route *MatchedRoute) (interface{}, error) {
+
+	// No auth needed
+	if len(route.Authenticators) == 0 {
+		return nil, nil
+	}
+
+	principal := SecurityPrincipalFromContext(ctx)
+
+	if principal == nil {
+		return nil, errors.Unauthenticated("invalid credentials")
+	}
+
+	return principal, nil
+}
+
+func NewContextWithBoundParams(ctx netContext.Context, request *http.Request, route *MatchedRoute) netContext.Context {
+	params := validateRequestContext(ctx, request, route)
+	return netContext.WithValue(ctx, ctxBoundParams, params)
+}
+
+func BoundParamsFromContext(ctx netContext.Context) boundParams {
+	if v, ok := ctx.Value(ctxBoundParams).(boundParams); ok {
+		return v
+	}
+
+	return boundParams{errs: []error{errors.New(http.StatusBadRequest, "Could not read parameters.")}}
 }
 
 // BindAndValidate binds and validates the request
-func (c *Context) BindAndValidate(request *http.Request, matched *MatchedRoute) (interface{}, error) {
-	if v, ok := context.GetOk(request, ctxBoundParams); ok {
-		if val, ok := v.(*validation); ok {
-			if len(val.result) > 0 {
-				return val.bound, errors.CompositeValidationError(val.result...)
-			}
-			return val.bound, nil
-		}
+func (c *ApiContext) BindAndValidate(ctx netContext.Context, request *http.Request, matched *MatchedRoute) (interface{}, error) {
+	params := BoundParamsFromContext(ctx)
+
+	if len(params.errs) > 0 {
+		return params.params, errors.CompositeValidationError(params.errs...)
 	}
-	result := validateRequest(c, request, matched)
-	if result != nil {
-		context.Set(request, ctxBoundParams, result)
-	}
-	if len(result.result) > 0 {
-		return result.bound, errors.CompositeValidationError(result.result...)
-	}
-	return result.bound, nil
+
+	return params.params, nil
 }
 
 // NotFound the default not found responder for when no route has been matched yet
-func (c *Context) NotFound(rw http.ResponseWriter, r *http.Request) {
-	c.Respond(rw, r, []string{c.api.DefaultProduces()}, nil, errors.NotFound("not found"))
+func (c *ApiContext) NotFound(rw http.ResponseWriter, r *http.Request) {
+	c.Respond(netContext.TODO(), rw, r, []string{c.api.DefaultProduces()}, nil, errors.NotFound("not found"))
 }
 
 // Respond renders the response after doing some content negotiation
-func (c *Context) Respond(rw http.ResponseWriter, r *http.Request, produces []string, route *MatchedRoute, data interface{}) {
+func (c *ApiContext) Respond(ctx netContext.Context, rw http.ResponseWriter, r *http.Request, produces []string, route *MatchedRoute, data interface{}) {
 	offers := []string{c.api.DefaultProduces()}
 	for _, mt := range produces {
 		if mt != c.api.DefaultProduces() {
@@ -357,7 +409,13 @@ func (c *Context) Respond(rw http.ResponseWriter, r *http.Request, produces []st
 		}
 	}
 
-	format := c.ResponseFormat(r, offers)
+	format := ResponseFormatFromContext(ctx)
+
+	// If the response format hasn't been set try to renegotiate with defaults
+	if format == "" {
+		format = NegotiateContentType(r, offers, "")
+	}
+
 	rw.Header().Set(httpkit.HeaderContentType, format)
 
 	if resp, ok := data.(Responder); ok {
@@ -419,7 +477,7 @@ func (c *Context) Respond(rw http.ResponseWriter, r *http.Request, produces []st
 }
 
 // APIHandler returns a handler to serve
-func (c *Context) APIHandler(builder Builder) http.Handler {
+func (c *ApiContext) APIHandler(builder Builder) http.Handler {
 	b := builder
 	if b == nil {
 		b = PassthroughBuilder

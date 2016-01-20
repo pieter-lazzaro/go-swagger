@@ -23,7 +23,7 @@ type GetEventsHandler interface {
 }
 
 // NewGetEvents creates a new http.Handler for the get events operation
-func NewGetEvents(ctx *middleware.Context, handler GetEventsHandler) *GetEvents {
+func NewGetEvents(ctx *middleware.ApiContext, handler GetEventsHandler) *GetEvents {
 	return &GetEvents{Context: ctx, Handler: handler}
 }
 
@@ -33,7 +33,7 @@ Get events.
 
 */
 type GetEvents struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Handler GetEventsHandler
 }
 

@@ -44,8 +44,14 @@ type UpdatePetWithFormParams struct {
 // for simple values it will use straight method calls
 func (o *UpdatePetWithFormParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		return err
+	if r.Header.Get("Content-Type") == "multipart/form-data" {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			return err
+		}
+	} else {
+		if err := r.ParseForm(); err != nil {
+			return err
+		}
 	}
 	fds := httpkit.Values(r.Form)
 

@@ -25,16 +25,18 @@ import (
 	"github.com/go-swagger/go-swagger/internal/testing/petstore"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/stretchr/testify/assert"
+    netContext "golang.org/x/net/context"
+    
 )
 
-func terminator(rw http.ResponseWriter, r *http.Request) {
+func terminator(ctx netContext.Context, rw http.ResponseWriter, r *http.Request) {
 	rw.WriteHeader(http.StatusOK)
 }
 
 func TestRouterMiddleware(t *testing.T) {
 	spec, api := petstore.NewAPI(t)
 	context := NewContext(spec, api, nil)
-	mw := newRouter(context, http.HandlerFunc(terminator))
+	mw := newRouter(context, HandlerFunc(terminator))
 
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/api/pets", nil)
@@ -60,7 +62,7 @@ func TestRouterMiddleware(t *testing.T) {
 
 	spec, api = petstore.NewRootAPI(t)
 	context = NewContext(spec, api, nil)
-	mw = newRouter(context, http.HandlerFunc(terminator))
+	mw = newRouter(context, HandlerFunc(terminator))
 
 	recorder = httptest.NewRecorder()
 	request, _ = http.NewRequest("GET", "/pets", nil)
@@ -123,7 +125,7 @@ func TestRouterCanonicalBasePath(t *testing.T) {
 	spec, api := petstore.NewAPI(t)
 	spec.Spec().BasePath = "/api///"
 	context := NewContext(spec, api, nil)
-	mw := newRouter(context, http.HandlerFunc(terminator))
+	mw := newRouter(context, HandlerFunc(terminator))
 
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/api/pets", nil)
@@ -134,7 +136,7 @@ func TestRouterCanonicalBasePath(t *testing.T) {
 
 func TestRouterStruct(t *testing.T) {
 	spec, api := petstore.NewAPI(t)
-	router := DefaultRouter(spec, newRoutableUntypedAPI(spec, api, new(Context)))
+	router := DefaultRouter(spec, newRoutableUntypedAPI(spec, api, new(ApiContext)))
 
 	methods := router.OtherMethods("post", "/pets/{id}")
 	assert.Len(t, methods, 2)
@@ -153,7 +155,7 @@ func TestRouterStruct(t *testing.T) {
 }
 
 func petAPIRouterBuilder(spec *spec.Document, api *untyped.API) *defaultRouteBuilder {
-	builder := newDefaultRouteBuilder(spec, newRoutableUntypedAPI(spec, api, new(Context)))
+	builder := newDefaultRouteBuilder(spec, newRoutableUntypedAPI(spec, api, new(ApiContext)))
 	builder.AddRoute("GET", "/pets", spec.AllPaths()["/pets"].Get)
 	builder.AddRoute("POST", "/pets", spec.AllPaths()["/pets"].Post)
 	builder.AddRoute("DELETE", "/pets/{id}", spec.AllPaths()["/pets/{id}"].Delete)

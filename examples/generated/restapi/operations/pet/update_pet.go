@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // UpdatePetHandlerFunc turns a function with the right signature into a update pet handler
@@ -23,7 +24,7 @@ type UpdatePetHandler interface {
 }
 
 // NewUpdatePet creates a new http.Handler for the update pet operation
-func NewUpdatePet(ctx *middleware.Context, handler UpdatePetHandler) *UpdatePet {
+func NewUpdatePet(ctx *middleware.ApiContext, handler UpdatePetHandler) *UpdatePet {
 	return &UpdatePet{Context: ctx, Handler: handler}
 }
 
@@ -33,18 +34,18 @@ Update an existing pet
 
 */
 type UpdatePet struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  UpdatePetParams
 	Handler UpdatePetHandler
 }
 
-func (o *UpdatePet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *UpdatePet) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewUpdatePetParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -53,12 +54,12 @@ func (o *UpdatePet) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

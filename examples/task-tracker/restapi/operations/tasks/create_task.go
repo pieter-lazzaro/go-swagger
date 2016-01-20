@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // CreateTaskHandlerFunc turns a function with the right signature into a create task handler
@@ -23,7 +24,7 @@ type CreateTaskHandler interface {
 }
 
 // NewCreateTask creates a new http.Handler for the create task operation
-func NewCreateTask(ctx *middleware.Context, handler CreateTaskHandler) *CreateTask {
+func NewCreateTask(ctx *middleware.ApiContext, handler CreateTaskHandler) *CreateTask {
 	return &CreateTask{Context: ctx, Handler: handler}
 }
 
@@ -38,18 +39,18 @@ created the task.
 
 */
 type CreateTask struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  CreateTaskParams
 	Handler CreateTaskHandler
 }
 
-func (o *CreateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *CreateTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewCreateTaskParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -58,12 +59,12 @@ func (o *CreateTask) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

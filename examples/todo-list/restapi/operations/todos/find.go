@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"golang.org/x/net/context"
 )
 
 // FindHandlerFunc turns a function with the right signature into a find handler
@@ -23,7 +24,7 @@ type FindHandler interface {
 }
 
 // NewFind creates a new http.Handler for the find operation
-func NewFind(ctx *middleware.Context, handler FindHandler) *Find {
+func NewFind(ctx *middleware.ApiContext, handler FindHandler) *Find {
 	return &Find{Context: ctx, Handler: handler}
 }
 
@@ -33,18 +34,18 @@ Find find API
 
 */
 type Find struct {
-	Context *middleware.Context
+	Context *middleware.ApiContext
 	Params  FindParams
 	Handler FindHandler
 }
 
-func (o *Find) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	route, _ := o.Context.RouteInfo(r)
+func (o *Find) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
+	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewFindParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -53,12 +54,12 @@ func (o *Find) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

@@ -21,30 +21,25 @@ import (
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit"
 	"github.com/go-swagger/go-swagger/swag"
+
+	"golang.org/x/net/context"
 )
 
 // NewValidation starts a new validation middleware
-func newValidation(ctx *Context, next http.Handler) http.Handler {
+func newValidation(ctx *ApiContext, next Handler) Handler {
 
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		matched, _ := ctx.RouteInfo(r)
-		_, result := ctx.BindAndValidate(r, matched)
+	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
+		matched := MatchedRouteFromContext(rCtx)
+
+		_, result := ctx.BindAndValidate(rCtx, r, matched)
 
 		if result != nil {
-			ctx.Respond(rw, r, matched.Produces, matched, result)
+			ctx.Respond(rCtx, rw, r, matched.Produces, matched, result)
 			return
 		}
 
-		next.ServeHTTP(rw, r)
+		next.ServeHTTP(rCtx, rw, r)
 	})
-}
-
-type validation struct {
-	context *Context
-	result  []error
-	request *http.Request
-	route   *MatchedRoute
-	bound   map[string]interface{}
 }
 
 type untypedBinder map[string]interface{}
@@ -68,51 +63,77 @@ func validateContentType(allowed []string, actual string) *errors.Validation {
 	return errors.InvalidContentType(actual, allowed)
 }
 
-func validateRequest(ctx *Context, request *http.Request, route *MatchedRoute) *validation {
-	validate := &validation{
-		context: ctx,
-		request: request,
-		route:   route,
-		bound:   make(map[string]interface{}),
+func validateRequestContentType(ctx context.Context, route *MatchedRoute, r *http.Request) error {
+	if !httpkit.CanHaveBody(r.Method) {
+		return nil
 	}
 
-	validate.contentType()
-	validate.responseFormat()
-	if len(validate.result) == 0 {
-		validate.parameters()
+	ct := ContentTypeFromContext(ctx)
+
+	if ct == nil {
+		return errors.New(http.StatusBadRequest, "Could not read content type.")
 	}
 
-	return validate
+	if ct.Err != nil {
+		return ct.Err
+	}
+
+	if err := validateContentType(route.Consumes, ct.MediaType); err != nil {
+
+		return err
+	}
+
+	route.Consumer = route.Consumers[ct.MediaType]
+
+	return nil
 }
 
-func (v *validation) parameters() {
-	if result := v.route.Binder.Bind(v.request, v.route.Params, v.route.Consumer, v.bound); result != nil {
+func validateRequestParameters(ctx context.Context, route *MatchedRoute, request *http.Request) (map[string]interface{}, []error) {
+	var errs []error
+	bound := make(map[string]interface{})
+
+	if result := route.Binder.Bind(request, route.Params, route.Consumer, bound); result != nil {
 		if result.Error() == "validation failure list" {
 			for _, e := range result.(*errors.Validation).Value.([]interface{}) {
-				v.result = append(v.result, e.(error))
+				errs = append(errs, e.(error))
 			}
-			return
-		}
-		v.result = append(v.result, result)
-	}
-}
-
-func (v *validation) contentType() {
-	if httpkit.CanHaveBody(v.request.Method) {
-		ct, _, err := v.context.ContentType(v.request)
-		if err != nil {
-			v.result = append(v.result, err)
-		} else {
-			if err := validateContentType(v.route.Consumes, ct); err != nil {
-				v.result = append(v.result, err)
-			}
-			v.route.Consumer = v.route.Consumers[ct]
+			return nil, errs
 		}
 	}
+
+	return bound, errs
 }
 
-func (v *validation) responseFormat() {
-	if str := v.context.ResponseFormat(v.request, v.route.Produces); str == "" {
-		v.result = append(v.result, errors.InvalidResponseFormat(v.request.Header.Get(httpkit.HeaderAccept), v.route.Produces))
+type boundParams struct {
+	params map[string]interface{}
+	errs   []error
+}
+
+func validateRequestContext(ctx context.Context, r *http.Request, route *MatchedRoute) boundParams {
+	result := boundParams{
+		params: make(map[string]interface{}),
 	}
+
+	if err := validateRequestContentType(ctx, route, r); err != nil {
+		result.errs = append(result.errs, err)
+	}
+
+	if format := ResponseFormatFromContext(ctx); format == "" {
+		result.errs = append(result.errs, errors.InvalidResponseFormat(r.Header.Get(httpkit.HeaderAccept), route.Produces))
+	}
+
+	if result.errs != nil {
+
+		return result
+	}
+
+	bound, err := validateRequestParameters(ctx, route, r)
+
+	if err != nil {
+		result.errs = append(result.errs, err...)
+	}
+
+	result.params = bound
+
+	return result
 }

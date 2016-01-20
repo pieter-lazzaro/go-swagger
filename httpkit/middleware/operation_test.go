@@ -41,7 +41,9 @@ func TestOperationExecutor(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/pets", nil)
 	request.Header.Add("Accept", "application/json")
 	request.SetBasicAuth("admin", "admin")
-	mw.ServeHTTP(recorder, request)
+	ctx := context.NewRequestContext(request)
+
+	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 200, recorder.Code)
 	assert.Equal(t, `[{"id":1,"name":"a dog"}]`+"\n", recorder.Body.String())
 
@@ -58,7 +60,9 @@ func TestOperationExecutor(t *testing.T) {
 	request, _ = http.NewRequest("GET", "/pets", nil)
 	request.Header.Add("Accept", "application/json")
 	request.SetBasicAuth("admin", "admin")
-	mw.ServeHTTP(recorder, request)
+
+	ctx = context.NewRequestContext(request)
+	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 422, recorder.Code)
 	assert.Equal(t, `{"code":422,"message":"expected"}`, recorder.Body.String())
 }
