@@ -95,7 +95,7 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *ApiCo
 					route := MatchedRouteFromContext(rCtx)
 
 					// bind and validate the request using reflection
-					bound, validation := context.BindAndValidate(r, route)
+					bound, validation := context.BindAndValidate(rCtx, r, route)
 					if validation != nil {
 						context.Respond(w, r, route.Produces, route, validation)
 						return
@@ -202,6 +202,7 @@ const (
 type contentTypeValue struct {
 	MediaType string
 	Charset   string
+	Err       error
 }
 
 // BasePath returns the base path for this API
@@ -254,8 +255,14 @@ func (c *ApiContext) BindValidRequest(request *http.Request, route *MatchedRoute
 	return nil
 }
 
-func NewContextWithContentType(ctx netContext.Context, contentType *contentTypeValue) netContext.Context {
-	return netContext.WithValue(ctx, ctxContentType, contentType)
+func NewContextWithContentType(ctx netContext.Context, request *http.Request) netContext.Context {
+
+	mt, cs, err := httpkit.ContentType(request.Header)
+	if err != nil {
+		return netContext.WithValue(ctx, ctxContentType, &contentTypeValue{"", "", err})
+	}
+
+	return netContext.WithValue(ctx, ctxContentType, &contentTypeValue{mt, cs, nil})
 }
 
 func ContentTypeFromContext(ctx netContext.Context) *contentTypeValue {
@@ -278,7 +285,7 @@ func (c *ApiContext) ContentType(request *http.Request) (string, string, *errors
 	if err != nil {
 		return "", "", err
 	}
-	context.Set(request, ctxContentType, &contentTypeValue{mt, cs})
+	context.Set(request, ctxContentType, &contentTypeValue{mt, cs, nil})
 	return mt, cs, nil
 }
 
@@ -302,6 +309,25 @@ func MatchedRouteFromContext(ctx netContext.Context) *MatchedRoute {
 	return nil
 }
 
+func (c *ApiContext) NewRequestContext(r *http.Request) netContext.Context {
+	ctx := netContext.TODO()
+
+	ctx = NewContextWithContentType(ctx, r)
+
+	if route, ok := c.LookupRoute(r); ok {
+
+		ctx = NewContextWithMatchedRoute(ctx, route)
+
+		ctx = NewContextWithSecurityPrincipal(ctx, r, route)
+
+		ctx = NewContextWithResponseFormat(ctx, route, r)
+
+		ctx = NewContextWithBoundParams(ctx, r, route)
+	}
+
+	return ctx
+}
+
 // RouteInfo tries to match a route for this request
 func (c *ApiContext) RouteInfo(request *http.Request) (*MatchedRoute, bool) {
 	if v, ok := context.GetOk(request, ctxMatchedRoute); ok {
@@ -318,8 +344,11 @@ func (c *ApiContext) RouteInfo(request *http.Request) (*MatchedRoute, bool) {
 	return nil, false
 }
 
-func NewContextWithResponseFormat(ctx netContext.Context, format string) netContext.Context {
-	return netContext.WithValue(ctx, ctxResponseFormat, format)
+func NewContextWithResponseFormat(ctx netContext.Context, route *MatchedRoute, request *http.Request) netContext.Context {
+	if format := NegotiateContentType(request, route.Produces, ""); format != "" {
+		return netContext.WithValue(ctx, ctxResponseFormat, format)
+	}
+	return ctx
 }
 
 func ResponseFormatFromContext(ctx netContext.Context) string {
@@ -350,65 +379,67 @@ func (c *ApiContext) AllowedMethods(request *http.Request) []string {
 	return c.router.OtherMethods(request.Method, request.URL.Path)
 }
 
-func NewContextWithSecurityPrincipal(ctx netContext.Context, principal interface{}) netContext.Context {
-	return netContext.WithValue(ctx, ctxSecurityPrincipal, principal)
+func NewContextWithSecurityPrincipal(ctx netContext.Context, request *http.Request, route *MatchedRoute) netContext.Context {
+
+	if len(route.Authenticators) == 0 {
+		return ctx
+	}
+
+	for _, authenticator := range route.Authenticators {
+		applies, usr, err := authenticator.Authenticate(request)
+
+		if !applies || err != nil || usr == nil {
+			continue
+		}
+		return netContext.WithValue(ctx, ctxSecurityPrincipal, usr)
+	}
+
+	return ctx
 }
 
 func SecurityPrincipalFromContext(ctx netContext.Context) interface{} {
 	return ctx.Value(ctxSecurityPrincipal)
 }
 
-// Authorize authorizes the request
-func (c *ApiContext) Authorize(request *http.Request, route *MatchedRoute) (interface{}, error) {
+// Authorize authorizes the request byt checking if a security principal is needed and has been set
+func (c *ApiContext) Authorize(ctx netContext.Context, request *http.Request, route *MatchedRoute) (interface{}, error) {
+
+	// No auth needed
 	if len(route.Authenticators) == 0 {
 		return nil, nil
 	}
-	if v, ok := context.GetOk(request, ctxSecurityPrincipal); ok {
-		return v, nil
+
+	principal := SecurityPrincipalFromContext(ctx)
+
+	if principal == nil {
+		return nil, errors.Unauthenticated("invalid credentials")
 	}
 
-	for _, authenticator := range route.Authenticators {
-		applies, usr, err := authenticator.Authenticate(request)
-		if !applies || err != nil || usr == nil {
-			continue
-		}
-		context.Set(request, ctxSecurityPrincipal, usr)
-		return usr, nil
-	}
-
-	return nil, errors.Unauthenticated("invalid credentials")
+	return principal, nil
 }
 
-func NewContextWithBoundParams(ctx netContext.Context, format string) netContext.Context {
-	return netContext.WithValue(ctx, ctxBoundParams, format)
+func NewContextWithBoundParams(ctx netContext.Context, request *http.Request, route *MatchedRoute) netContext.Context {
+	params := validateRequestContext(ctx, request, route)
+	return netContext.WithValue(ctx, ctxBoundParams, params)
 }
 
-func BoundParamsFromContext(ctx netContext.Context) string {
-	if v, ok := ctx.Value(ctxBoundParams).(string); ok {
+func BoundParamsFromContext(ctx netContext.Context) boundParams {
+	if v, ok := ctx.Value(ctxBoundParams).(boundParams); ok {
 		return v
 	}
 
-	return ""
+	return boundParams{errs: []error{errors.New(http.StatusBadRequest, "Could not read parameters.")}}
 }
 
 // BindAndValidate binds and validates the request
-func (c *ApiContext) BindAndValidate(request *http.Request, matched *MatchedRoute) (interface{}, error) {
-	if v, ok := context.GetOk(request, ctxBoundParams); ok {
-		if val, ok := v.(*validation); ok {
-			if len(val.result) > 0 {
-				return val.bound, errors.CompositeValidationError(val.result...)
-			}
-			return val.bound, nil
-		}
+func (c *ApiContext) BindAndValidate(ctx netContext.Context, request *http.Request, matched *MatchedRoute) (interface{}, error) {
+	params := BoundParamsFromContext(ctx)
+
+	if len(params.errs) > 0 {
+		return params.params, errors.CompositeValidationError(params.errs...)
 	}
-	result := validateRequest(c, request, matched)
-	if result != nil {
-		context.Set(request, ctxBoundParams, result)
-	}
-	if len(result.result) > 0 {
-		return result.bound, errors.CompositeValidationError(result.result...)
-	}
-	return result.bound, nil
+
+	return params.params, nil
 }
 
 // NotFound the default not found responder for when no route has been matched yet

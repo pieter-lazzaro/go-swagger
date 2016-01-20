@@ -23,7 +23,6 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit"
 	"github.com/go-swagger/go-swagger/internal/testing/petstore"
 	"github.com/stretchr/testify/assert"
-    netContext "golang.org/x/net/context"
 )
 
 func TestOperationExecutor(t *testing.T) {
@@ -42,9 +41,8 @@ func TestOperationExecutor(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/pets", nil)
 	request.Header.Add("Accept", "application/json")
 	request.SetBasicAuth("admin", "admin")
-    r, _ := context.LookupRoute(request)
-	ctx := NewContextWithMatchedRoute(netContext.TODO(), r)
-    
+	ctx := context.NewRequestContext(request)
+
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 200, recorder.Code)
 	assert.Equal(t, `[{"id":1,"name":"a dog"}]`+"\n", recorder.Body.String())
@@ -62,9 +60,8 @@ func TestOperationExecutor(t *testing.T) {
 	request, _ = http.NewRequest("GET", "/pets", nil)
 	request.Header.Add("Accept", "application/json")
 	request.SetBasicAuth("admin", "admin")
-    
-    r, _ = context.LookupRoute(request)
-	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+
+	ctx = context.NewRequestContext(request)
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 422, recorder.Code)
 	assert.Equal(t, `{"code":422,"message":"expected"}`, recorder.Body.String())

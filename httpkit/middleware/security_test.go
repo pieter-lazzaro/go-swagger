@@ -21,7 +21,6 @@ import (
 
 	"github.com/go-swagger/go-swagger/internal/testing/petstore"
 	"github.com/stretchr/testify/assert"
-	netContext "golang.org/x/net/context"
 )
 
 func TestSecurityMiddleware(t *testing.T) {
@@ -33,8 +32,7 @@ func TestSecurityMiddleware(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/pets", nil)
 
-	r, _ := context.LookupRoute(request)
-	ctx := NewContextWithMatchedRoute(netContext.TODO(), r)
+	ctx := context.NewRequestContext(request)
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 401, recorder.Code)
 
@@ -42,8 +40,7 @@ func TestSecurityMiddleware(t *testing.T) {
 	request, _ = http.NewRequest("GET", "/pets", nil)
 	request.SetBasicAuth("admin", "wrong")
 
-    r, _ = context.LookupRoute(request)
-	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	ctx = context.NewRequestContext(request)
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 401, recorder.Code)
 
@@ -51,16 +48,14 @@ func TestSecurityMiddleware(t *testing.T) {
 	request, _ = http.NewRequest("GET", "/pets", nil)
 	request.SetBasicAuth("admin", "admin")
 
-	r, _ = context.LookupRoute(request)
-	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	ctx = context.NewRequestContext(request)
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 200, recorder.Code)
 
 	recorder = httptest.NewRecorder()
 	request, _ = http.NewRequest("GET", "/pets/1", nil)
 
-	r, _ = context.LookupRoute(request)
-	ctx = NewContextWithMatchedRoute(netContext.TODO(), r)
+	ctx = context.NewRequestContext(request)
 	mw.ServeHTTP(ctx, recorder, request)
 	assert.Equal(t, 200, recorder.Code)
 

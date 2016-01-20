@@ -53,42 +53,28 @@ func TestContextAuthorize(t *testing.T) {
 
 	request, _ := httpkit.JSONRequest("GET", "/pets", nil)
 
-	v, ok := context.GetOk(request, ctxSecurityPrincipal)
-	assert.False(t, ok)
-	assert.Nil(t, v)
+	rctx := ctx.NewRequestContext(request)
 
 	ri, ok := ctx.LookupRoute(request)
 	assert.True(t, ok)
-	p, err := ctx.Authorize(request, ri)
+
+	p, err := ctx.Authorize(rctx, request, ri)
 	assert.Error(t, err)
 	assert.Nil(t, p)
-
-	v, ok = context.GetOk(request, ctxSecurityPrincipal)
-	assert.False(t, ok)
-	assert.Nil(t, v)
 
 	request.SetBasicAuth("wrong", "wrong")
-	p, err = ctx.Authorize(request, ri)
+	rctx = ctx.NewRequestContext(request)
+
+	p, err = ctx.Authorize(rctx, request, ri)
 	assert.Error(t, err)
 	assert.Nil(t, p)
 
-	v, ok = context.GetOk(request, ctxSecurityPrincipal)
-	assert.False(t, ok)
-	assert.Nil(t, v)
-
 	request.SetBasicAuth("admin", "admin")
-	p, err = ctx.Authorize(request, ri)
+	rctx = ctx.NewRequestContext(request)
+	p, err = ctx.Authorize(rctx, request, ri)
+
 	assert.NoError(t, err)
 	assert.Equal(t, "admin", p)
-
-	v, ok = context.GetOk(request, ctxSecurityPrincipal)
-	assert.True(t, ok)
-	assert.Equal(t, "admin", v)
-
-	request.SetBasicAuth("doesn't matter", "doesn't")
-	pp, rr := ctx.Authorize(request, ri)
-	assert.Equal(t, p, pp)
-	assert.Equal(t, err, rr)
 }
 
 func TestContextBindAndValidate(t *testing.T) {
@@ -100,20 +86,15 @@ func TestContextBindAndValidate(t *testing.T) {
 	request.Header.Add("Accept", "*/*")
 	request.Header.Add("content-type", "text/html")
 
-	v, ok := context.GetOk(request, ctxBoundParams)
-	assert.False(t, ok)
-	assert.Nil(t, v)
-
 	ri, _ := ctx.LookupRoute(request)
-	data, result := ctx.BindAndValidate(request, ri) // this requires a much more thorough test
+
+	rctx := ctx.NewRequestContext(request)
+
+	data, result := ctx.BindAndValidate(rctx, request, ri) // this requires a much more thorough test
 	assert.NotNil(t, data)
 	assert.NotNil(t, result)
 
-	v, ok = context.GetOk(request, ctxBoundParams)
-	assert.True(t, ok)
-	assert.NotNil(t, v)
-
-	dd, rr := ctx.BindAndValidate(request, ri)
+	dd, rr := ctx.BindAndValidate(rctx, request, ri)
 	assert.Equal(t, data, dd)
 	assert.Equal(t, result, rr)
 }
@@ -279,53 +260,53 @@ func TestContextInvalidResponseFormat(t *testing.T) {
 // 	assert.Nil(t, matched)
 // }
 
-func TestContextValidContentType(t *testing.T) {
-	ct := "application/json"
-	ctx := NewContext(nil, nil, nil)
+// func TestContextValidContentType(t *testing.T) {
+// 	ct := "application/json"
+// 	ctx := NewContext(nil, nil, nil)
 
-	request, _ := http.NewRequest("GET", "http://localhost:8080", nil)
-	request.Header.Set(httpkit.HeaderContentType, ct)
+// 	request, _ := http.NewRequest("GET", "http://localhost:8080", nil)
+// 	request.Header.Set(httpkit.HeaderContentType, ct)
 
-	// check there's nothing there
-	_, ok := context.GetOk(request, ctxContentType)
-	assert.False(t, ok)
+// 	// check there's nothing there
+// 	_, ok := context.GetOk(request, ctxContentType)
+// 	assert.False(t, ok)
 
-	// trigger the parse
-	mt, _, err := ctx.ContentType(request)
-	assert.NoError(t, err)
-	assert.Equal(t, ct, mt)
+// 	// trigger the parse
+// 	mt, _, err := ctx.ContentType(request)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, ct, mt)
 
-	// check it was cached
-	_, ok = context.GetOk(request, ctxContentType)
-	assert.True(t, ok)
+// 	// check it was cached
+// 	_, ok = context.GetOk(request, ctxContentType)
+// 	assert.True(t, ok)
 
-	// check if the cast works and fetch from cache too
-	mt, _, err = ctx.ContentType(request)
-	assert.NoError(t, err)
-	assert.Equal(t, ct, mt)
-}
+// 	// check if the cast works and fetch from cache too
+// 	mt, _, err = ctx.ContentType(request)
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, ct, mt)
+// }
 
-func TestContextInvalidContentType(t *testing.T) {
-	ct := "application("
-	ctx := NewContext(nil, nil, nil)
+// func TestContextInvalidContentType(t *testing.T) {
+// 	ct := "application("
+// 	ctx := NewContext(nil, nil, nil)
 
-	request, _ := http.NewRequest("GET", "http://localhost:8080", nil)
-	request.Header.Set(httpkit.HeaderContentType, ct)
+// 	request, _ := http.NewRequest("GET", "http://localhost:8080", nil)
+// 	request.Header.Set(httpkit.HeaderContentType, ct)
 
-	// check there's nothing there
-	_, ok := context.GetOk(request, ctxContentType)
-	assert.False(t, ok)
+// 	// check there's nothing there
+// 	_, ok := context.GetOk(request, ctxContentType)
+// 	assert.False(t, ok)
 
-	// trigger the parse
-	mt, _, err := ctx.ContentType(request)
-	assert.Error(t, err)
-	assert.Empty(t, mt)
+// 	// trigger the parse
+// 	mt, _, err := ctx.ContentType(request)
+// 	assert.Error(t, err)
+// 	assert.Empty(t, mt)
 
-	// check it was not cached
-	_, ok = context.GetOk(request, ctxContentType)
-	assert.False(t, ok)
+// 	// check it was not cached
+// 	_, ok = context.GetOk(request, ctxContentType)
+// 	assert.False(t, ok)
 
-	// check if the failure continues
-	_, _, err = ctx.ContentType(request)
-	assert.Error(t, err)
-}
+// 	// check if the failure continues
+// 	_, _, err = ctx.ContentType(request)
+// 	assert.Error(t, err)
+// }

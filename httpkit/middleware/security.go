@@ -22,12 +22,13 @@ import (
 func newSecureAPI(ctx *ApiContext, next Handler) Handler {
 	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
 		route := MatchedRouteFromContext(rCtx)
-		if len(route.Authenticators) == 0 {
+		
+        if len(route.Authenticators) == 0 {
 			next.ServeHTTP(rCtx, rw, r)
 			return
 		}
-
-		if _, err := ctx.Authorize(r, route); err != nil {
+        
+		if _, err := ctx.Authorize(rCtx, r, route); err != nil {
 			ctx.Respond(rw, r, route.Produces, route, err)
 			return
 		}

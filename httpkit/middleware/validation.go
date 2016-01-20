@@ -15,14 +15,15 @@
 package middleware
 
 import (
+	"log"
 	"mime"
 	"net/http"
 
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit"
 	"github.com/go-swagger/go-swagger/swag"
-    
-    "golang.org/x/net/context"
+
+	"golang.org/x/net/context"
 )
 
 // NewValidation starts a new validation middleware
@@ -30,8 +31,8 @@ func newValidation(ctx *ApiContext, next Handler) Handler {
 
 	return HandlerFunc(func(rCtx context.Context, rw http.ResponseWriter, r *http.Request) {
 		matched := MatchedRouteFromContext(rCtx)
-        
-		_, result := ctx.BindAndValidate(r, matched)
+
+		_, result := ctx.BindAndValidate(rCtx, r, matched)
 
 		if result != nil {
 			ctx.Respond(rw, r, matched.Produces, matched, result)
@@ -69,6 +70,84 @@ func validateContentType(allowed []string, actual string) *errors.Validation {
 		return nil
 	}
 	return errors.InvalidContentType(actual, allowed)
+}
+
+func validateRequestContentType(ctx context.Context, route *MatchedRoute, r *http.Request) error {
+	if !httpkit.CanHaveBody(r.Method) {
+		return nil
+	}
+
+	ct := ContentTypeFromContext(ctx)
+
+	if ct == nil {
+		return errors.New(http.StatusBadRequest, "Could not read content type.")
+	}
+
+	if ct.Err != nil {
+		log.Println("content type", ct)
+		return ct.Err
+	}
+
+	if err := validateContentType(route.Consumes, ct.MediaType); err != nil {
+		log.Println("content type", ct, err)
+		return err
+	}
+
+	route.Consumer = route.Consumers[ct.MediaType]
+
+	return nil
+}
+
+func validateRequestParameters(ctx context.Context, route *MatchedRoute, request *http.Request) (map[string]interface{}, []error) {
+	var errs []error
+	bound := make(map[string]interface{})
+
+	if result := route.Binder.Bind(request, route.Params, route.Consumer, bound); result != nil {
+		if result.Error() == "validation failure list" {
+			for _, e := range result.(*errors.Validation).Value.([]interface{}) {
+				errs = append(errs, e.(error))
+			}
+			return nil, errs
+		}
+	}
+
+	return bound, errs
+}
+
+type boundParams struct {
+	params map[string]interface{}
+	errs   []error
+}
+
+func validateRequestContext(ctx context.Context, r *http.Request, route *MatchedRoute) boundParams {
+	result := boundParams{
+		params: make(map[string]interface{}),
+	}
+
+	if err := validateRequestContentType(ctx, route, r); err != nil {
+		result.errs = append(result.errs, err)
+	}
+
+	if format := ResponseFormatFromContext(ctx); format == "" {
+		result.errs = append(result.errs, errors.InvalidResponseFormat(r.Header.Get(httpkit.HeaderAccept), route.Produces))
+	}
+
+	if result.errs != nil {
+
+		log.Printf("Bound Params w/ Errors: %#v\n", result)
+		return result
+	}
+
+	bound, err := validateRequestParameters(ctx, route, r)
+
+	if err != nil {
+		result.errs = append(result.errs, err...)
+	}
+
+	result.params = bound
+
+	log.Printf("Bound Params: %#v\n", result)
+	return result
 }
 
 func validateRequest(ctx *ApiContext, request *http.Request, route *MatchedRoute) *validation {
