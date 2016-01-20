@@ -23,22 +23,20 @@ import (
 	"github.com/go-swagger/go-swagger/httpkit/middleware/untyped"
 	"github.com/go-swagger/go-swagger/spec"
 	"github.com/go-swagger/go-swagger/strfmt"
-	"github.com/gorilla/context"
 	netContext "golang.org/x/net/context"
 )
 
 // A Builder can create middlewares
 type Builder func(Handler) Handler
 
-
 type HandlerFunc func(netContext.Context, http.ResponseWriter, *http.Request)
 
 func (h HandlerFunc) ServeHTTP(ctx netContext.Context, w http.ResponseWriter, r *http.Request) {
-    h(ctx, w, r)
+	h(ctx, w, r)
 }
 
 type Handler interface {
-    ServeHTTP(netContext.Context, http.ResponseWriter, *http.Request)
+	ServeHTTP(netContext.Context, http.ResponseWriter, *http.Request)
 }
 
 // PassthroughBuilder returns the handler, aka the builder identity function
@@ -97,7 +95,7 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *ApiCo
 					// bind and validate the request using reflection
 					bound, validation := context.BindAndValidate(rCtx, r, route)
 					if validation != nil {
-						context.Respond(w, r, route.Produces, route, validation)
+						context.Respond(rCtx, w, r, route.Produces, route, validation)
 						return
 					}
 
@@ -105,12 +103,12 @@ func newRoutableUntypedAPI(spec *spec.Document, api *untyped.API, context *ApiCo
 					result, err := oh.Handle(bound)
 					if err != nil {
 						// respond with failure
-						context.Respond(w, r, route.Produces, route, err)
+						context.Respond(rCtx, w, r, route.Produces, route, err)
 						return
 					}
 
 					// respond with success
-					context.Respond(w, r, route.Produces, route, result)
+					context.Respond(rCtx, w, r, route.Produces, route, result)
 				})
 
 				if len(schemes) > 0 {
@@ -273,22 +271,6 @@ func ContentTypeFromContext(ctx netContext.Context) *contentTypeValue {
 	return nil
 }
 
-// ContentType gets the parsed value of a content type
-func (c *ApiContext) ContentType(request *http.Request) (string, string, *errors.ParseError) {
-	if v, ok := context.GetOk(request, ctxContentType); ok {
-		if val, ok := v.(*contentTypeValue); ok {
-			return val.MediaType, val.Charset, nil
-		}
-	}
-
-	mt, cs, err := httpkit.ContentType(request.Header)
-	if err != nil {
-		return "", "", err
-	}
-	context.Set(request, ctxContentType, &contentTypeValue{mt, cs, nil})
-	return mt, cs, nil
-}
-
 // LookupRoute looks a route up and returns true when it is found
 func (c *ApiContext) LookupRoute(request *http.Request) (*MatchedRoute, bool) {
 	if route, ok := c.router.Lookup(request.Method, request.URL.Path); ok {
@@ -328,23 +310,8 @@ func (c *ApiContext) NewRequestContext(r *http.Request) netContext.Context {
 	return ctx
 }
 
-// RouteInfo tries to match a route for this request
-func (c *ApiContext) RouteInfo(request *http.Request) (*MatchedRoute, bool) {
-	if v, ok := context.GetOk(request, ctxMatchedRoute); ok {
-		if val, ok := v.(*MatchedRoute); ok {
-			return val, ok
-		}
-	}
-
-	if route, ok := c.LookupRoute(request); ok {
-		context.Set(request, ctxMatchedRoute, route)
-		return route, ok
-	}
-
-	return nil, false
-}
-
 func NewContextWithResponseFormat(ctx netContext.Context, route *MatchedRoute, request *http.Request) netContext.Context {
+
 	if format := NegotiateContentType(request, route.Produces, ""); format != "" {
 		return netContext.WithValue(ctx, ctxResponseFormat, format)
 	}
@@ -352,26 +319,12 @@ func NewContextWithResponseFormat(ctx netContext.Context, route *MatchedRoute, r
 }
 
 func ResponseFormatFromContext(ctx netContext.Context) string {
+
 	if v, ok := ctx.Value(ctxResponseFormat).(string); ok {
 		return v
 	}
 
 	return ""
-}
-
-// ResponseFormat negotiates the response content type
-func (c *ApiContext) ResponseFormat(r *http.Request, offers []string) string {
-	if v, ok := context.GetOk(r, ctxResponseFormat); ok {
-		if val, ok := v.(string); ok {
-			return val
-		}
-	}
-
-	format := NegotiateContentType(r, offers, "")
-	if format != "" {
-		context.Set(r, ctxResponseFormat, format)
-	}
-	return format
 }
 
 // AllowedMethods gets the allowed methods for the path of this request
@@ -444,11 +397,11 @@ func (c *ApiContext) BindAndValidate(ctx netContext.Context, request *http.Reque
 
 // NotFound the default not found responder for when no route has been matched yet
 func (c *ApiContext) NotFound(rw http.ResponseWriter, r *http.Request) {
-	c.Respond(rw, r, []string{c.api.DefaultProduces()}, nil, errors.NotFound("not found"))
+	c.Respond(netContext.TODO(), rw, r, []string{c.api.DefaultProduces()}, nil, errors.NotFound("not found"))
 }
 
 // Respond renders the response after doing some content negotiation
-func (c *ApiContext) Respond(rw http.ResponseWriter, r *http.Request, produces []string, route *MatchedRoute, data interface{}) {
+func (c *ApiContext) Respond(ctx netContext.Context, rw http.ResponseWriter, r *http.Request, produces []string, route *MatchedRoute, data interface{}) {
 	offers := []string{c.api.DefaultProduces()}
 	for _, mt := range produces {
 		if mt != c.api.DefaultProduces() {
@@ -456,7 +409,13 @@ func (c *ApiContext) Respond(rw http.ResponseWriter, r *http.Request, produces [
 		}
 	}
 
-	format := c.ResponseFormat(r, offers)
+	format := ResponseFormatFromContext(ctx)
+
+	// If the response format hasn't been set try to renegotiate with defaults
+	if format == "" {
+		format = NegotiateContentType(r, offers, "")
+	}
+
 	rw.Header().Set(httpkit.HeaderContentType, format)
 
 	if resp, ok := data.(Responder); ok {

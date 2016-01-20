@@ -34,7 +34,7 @@ func newValidation(ctx *ApiContext, next Handler) Handler {
 		_, result := ctx.BindAndValidate(rCtx, r, matched)
 
 		if result != nil {
-			ctx.Respond(rw, r, matched.Produces, matched, result)
+			ctx.Respond(rCtx, rw, r, matched.Produces, matched, result)
 			return
 		}
 
