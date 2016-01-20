@@ -15,7 +15,6 @@
 package middleware
 
 import (
-	"log"
 	"mime"
 	"net/http"
 
@@ -41,14 +40,6 @@ func newValidation(ctx *ApiContext, next Handler) Handler {
 
 		next.ServeHTTP(rCtx, rw, r)
 	})
-}
-
-type validation struct {
-	context *ApiContext
-	result  []error
-	request *http.Request
-	route   *MatchedRoute
-	bound   map[string]interface{}
 }
 
 type untypedBinder map[string]interface{}
@@ -84,12 +75,11 @@ func validateRequestContentType(ctx context.Context, route *MatchedRoute, r *htt
 	}
 
 	if ct.Err != nil {
-		log.Println("content type", ct)
 		return ct.Err
 	}
 
 	if err := validateContentType(route.Consumes, ct.MediaType); err != nil {
-		log.Println("content type", ct, err)
+
 		return err
 	}
 
@@ -134,7 +124,6 @@ func validateRequestContext(ctx context.Context, r *http.Request, route *Matched
 
 	if result.errs != nil {
 
-		log.Printf("Bound Params w/ Errors: %#v\n", result)
 		return result
 	}
 
@@ -146,55 +135,5 @@ func validateRequestContext(ctx context.Context, r *http.Request, route *Matched
 
 	result.params = bound
 
-	log.Printf("Bound Params: %#v\n", result)
 	return result
-}
-
-func validateRequest(ctx *ApiContext, request *http.Request, route *MatchedRoute) *validation {
-	validate := &validation{
-		context: ctx,
-		request: request,
-		route:   route,
-		bound:   make(map[string]interface{}),
-	}
-
-	validate.contentType()
-	validate.responseFormat()
-	if len(validate.result) == 0 {
-		validate.parameters()
-	}
-
-	return validate
-}
-
-func (v *validation) parameters() {
-	if result := v.route.Binder.Bind(v.request, v.route.Params, v.route.Consumer, v.bound); result != nil {
-		if result.Error() == "validation failure list" {
-			for _, e := range result.(*errors.Validation).Value.([]interface{}) {
-				v.result = append(v.result, e.(error))
-			}
-			return
-		}
-		v.result = append(v.result, result)
-	}
-}
-
-func (v *validation) contentType() {
-	if httpkit.CanHaveBody(v.request.Method) {
-		ct, _, err := v.context.ContentType(v.request)
-		if err != nil {
-			v.result = append(v.result, err)
-		} else {
-			if err := validateContentType(v.route.Consumes, ct); err != nil {
-				v.result = append(v.result, err)
-			}
-			v.route.Consumer = v.route.Consumers[ct]
-		}
-	}
-}
-
-func (v *validation) responseFormat() {
-	if str := v.context.ResponseFormat(v.request, v.route.Produces); str == "" {
-		v.result = append(v.result, errors.InvalidResponseFormat(v.request.Header.Get(httpkit.HeaderAccept), v.route.Produces))
-	}
 }
