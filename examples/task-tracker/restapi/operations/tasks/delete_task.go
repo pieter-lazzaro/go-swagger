@@ -46,9 +46,9 @@ func (o *DeleteTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *h
 	route := middleware.MatchedRouteFromContext(ctx)
 	o.Params = NewDeleteTaskParams()
 
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -57,12 +57,12 @@ func (o *DeleteTask) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *h
 	}
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params, principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

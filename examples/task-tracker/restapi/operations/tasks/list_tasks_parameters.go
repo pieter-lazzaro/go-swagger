@@ -142,7 +142,7 @@ func (o *ListTasksParams) bindStatus(rawData []string, hasKey bool, formats strf
 	var ir []string
 	iValidateElement := func(i int, statusI string) *errors.Validation {
 
-		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", o.Status[i], []interface{}{"open", "closed", "ignored", "rejected"}); err != nil {
+		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", statusI, []interface{}{"open", "closed", "ignored", "rejected"}); err != nil {
 			return err
 		}
 

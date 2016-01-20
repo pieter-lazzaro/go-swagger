@@ -42,12 +42,12 @@ func (o *LogoutUser) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *h
 	route := middleware.MatchedRouteFromContext(ctx)
 
 	if err := o.Context.BindValidRequest(r, route, nil); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle() // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

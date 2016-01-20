@@ -46,12 +46,12 @@ func (o *DeleteOrder) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *
 	o.Params = NewDeleteOrderParams()
 
 	if err := o.Context.BindValidRequest(r, route, &o.Params); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(o.Params) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }

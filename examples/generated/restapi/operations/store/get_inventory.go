@@ -45,9 +45,9 @@ type GetInventory struct {
 
 func (o *GetInventory) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
 	route := middleware.MatchedRouteFromContext(ctx)
-	uprinc, err := o.Context.Authorize(r, route)
+	uprinc, err := o.Context.Authorize(ctx, r, route)
 	if err != nil {
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 	var principal interface{}
@@ -56,13 +56,13 @@ func (o *GetInventory) ServeHTTP(ctx context.Context, rw http.ResponseWriter, r 
 	}
 
 	if err := o.Context.BindValidRequest(r, route, nil); err != nil { // bind params
-		o.Context.Respond(rw, r, route.Produces, route, err)
+		o.Context.Respond(ctx, rw, r, route.Produces, route, err)
 		return
 	}
 
 	res := o.Handler.Handle(principal) // actually handle the request
 
-	o.Context.Respond(rw, r, route.Produces, route, res)
+	o.Context.Respond(ctx, rw, r, route.Produces, route, res)
 
 }
 

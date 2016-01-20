@@ -148,7 +148,7 @@ func (o *FindParams) bindTags(rawData []string, hasKey bool, formats strfmt.Regi
 			return errors.InvalidType(fmt.Sprintf("%s.%v", "tags", i), "formData", "int32", ic[i])
 		}
 
-		if err := iValidateElement(i, o.Tags[i]); err != nil {
+		if err := iValidateElement(i, tagsI); err != nil {
 			return err
 		}
 		ir = append(ir, value)

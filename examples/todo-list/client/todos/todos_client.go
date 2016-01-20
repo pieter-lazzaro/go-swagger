@@ -36,7 +36,7 @@ func (a *Client) AddOne(params *AddOneParams, authInfo client.AuthInfoWriter) (*
 		ID:          "addOne",
 		Method:      "POST",
 		PathPattern: "/",
-		Schemes:     []string{"http", "https"},
+		Schemes:     []string{"https", "http"},
 		Params:      params,
 		Reader:      &AddOneReader{formats: a.formats},
 		AuthInfo:    authInfo,
