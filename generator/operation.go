@@ -33,6 +33,11 @@ import (
 // It also generates an operation handler interface that uses the parameter model for handling a valid request.
 // Allows for specifying a list of tags to include only certain tags for the generation
 func GenerateServerOperation(operationNames, tags []string, includeHandler, includeParameters, includeResponses bool, opts GenOpts) error {
+
+	if opts.CustomFormatsFile != "" {
+		loadCustomFormatsFile(opts.CustomFormatsFile)
+	}
+
 	// Load the spec
 	_, specDoc, err := loadSpec(opts.Spec)
 	if err != nil {

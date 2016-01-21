@@ -50,6 +50,11 @@ func GenerateSupport(name string, modelNames, operationIDs []string, opts GenOpt
 }
 
 func newAppGenerator(name string, modelNames, operationIDs []string, opts *GenOpts) (*appGenerator, error) {
+
+	if opts.CustomFormatsFile != "" {
+		loadCustomFormatsFile(opts.CustomFormatsFile)
+	}
+
 	// Load the spec
 	_, specDoc, err := loadSpec(opts.Spec)
 	if err != nil {

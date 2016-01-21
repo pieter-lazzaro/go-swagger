@@ -28,6 +28,11 @@ import (
 
 // GenerateClient generates a client library for a swagger spec document.
 func GenerateClient(name string, modelNames, operationIDs []string, opts GenOpts) error {
+
+	if opts.CustomFormatsFile != "" {
+		loadCustomFormatsFile(opts.CustomFormatsFile)
+	}
+
 	// Load the spec
 	_, specDoc, err := loadSpec(opts.Spec)
 	if err != nil {
