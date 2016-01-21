@@ -93,6 +93,7 @@ type GenOpts struct {
 	IncludeResponses  bool
 	IncludeMain       bool
 	CustomFormatsFile string
+	TemplateDir       string
 }
 
 type generatorOptions struct {

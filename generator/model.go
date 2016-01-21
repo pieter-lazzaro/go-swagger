@@ -35,6 +35,13 @@ func GenerateDefinition(modelNames []string, includeModel, includeValidator bool
 	if opts.CustomFormatsFile != "" {
 		loadCustomFormatsFile(opts.CustomFormatsFile)
 	}
+	if opts.TemplateDir != "" {
+		if recompile, err := loadCustomTemplates(opts.TemplateDir, ""); err != nil {
+			return err
+		} else if recompile {
+			compileTemplates()
+		}
+	}
 
 	// Load the spec
 	specPath, specDoc, err := loadSpec(opts.Spec)

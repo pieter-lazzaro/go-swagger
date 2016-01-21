@@ -44,5 +44,6 @@ func (s *Support) Execute(args []string) error {
 			DumpData:          s.DumpData,
 			DefaultScheme:     s.DefaultScheme,
 			CustomFormatsFile: string(s.CustomFormatsFile),
+			TemplateDir:       string(s.TemplateDir),
 		})
 }

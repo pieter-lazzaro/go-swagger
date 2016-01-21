@@ -55,5 +55,6 @@ func (o *Operation) Execute(args []string) error {
 			DumpData:          o.DumpData,
 			DefaultScheme:     o.DefaultScheme,
 			CustomFormatsFile: string(o.CustomFormatsFile),
+			TemplateDir:       string(o.TemplateDir),
 		})
 }

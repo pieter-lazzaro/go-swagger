@@ -47,5 +47,6 @@ func (m *Model) Execute(args []string) error {
 			ClientPackage:     m.ClientPackage,
 			DumpData:          m.DumpData,
 			CustomFormatsFile: string(m.CustomFormatsFile),
+			TemplateDir:       string(m.TemplateDir),
 		})
 }

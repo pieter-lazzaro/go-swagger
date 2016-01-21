@@ -37,6 +37,13 @@ func GenerateServerOperation(operationNames, tags []string, includeHandler, incl
 	if opts.CustomFormatsFile != "" {
 		loadCustomFormatsFile(opts.CustomFormatsFile)
 	}
+	if opts.TemplateDir != "" {
+		if recompile, err := loadCustomTemplates(opts.TemplateDir, ""); err != nil {
+			return err
+		} else if recompile {
+			compileTemplates()
+		}
+	}
 
 	// Load the spec
 	_, specDoc, err := loadSpec(opts.Spec)

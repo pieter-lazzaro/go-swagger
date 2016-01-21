@@ -27,8 +27,7 @@ type shared struct {
 	ClientPackage     string         `long:"client-package" short:"c" description:"the package to save the client specific code" default:"client"`
 	Target            flags.Filename `long:"target" short:"t" default:"./" description:"the base directory for generating the files"`
 	CustomFormatsFile flags.Filename `long:"custom-formats"`
-	// TemplateDir  flags.Filename `long:"template-dir"`
-
+	TemplateDir       flags.Filename `long:"template-dir"`
 }
 
 // Server the command to generate an entire server application
@@ -64,6 +63,7 @@ func (s *Server) Execute(args []string) error {
 		IncludeResponses:  !s.SkipOperations,
 		IncludeMain:       s.IncludeMain,
 		CustomFormatsFile: string(s.CustomFormatsFile),
+		TemplateDir:       string(s.TemplateDir),
 	}
 
 	return generator.GenerateServer(s.Name, s.Models, s.Operations, opts)
