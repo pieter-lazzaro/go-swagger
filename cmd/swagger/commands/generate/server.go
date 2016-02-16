@@ -20,13 +20,14 @@ import (
 )
 
 type shared struct {
-	Spec          flags.Filename `long:"spec" short:"f" description:"the spec file to use" default:"./swagger.json"`
-	APIPackage    string         `long:"api-package" short:"a" description:"the package to save the operations" default:"operations"`
-	ModelPackage  string         `long:"model-package" short:"m" description:"the package to save the models" default:"models"`
-	ServerPackage string         `long:"server-package" short:"s" description:"the package to save the server specific code" default:"restapi"`
-	ClientPackage string         `long:"client-package" short:"c" description:"the package to save the client specific code" default:"client"`
-	Target        flags.Filename `long:"target" short:"t" default:"./" description:"the base directory for generating the files"`
-	TemplateDir   flags.Filename `long:"template-dir"`
+	Spec              flags.Filename `long:"spec" short:"f" description:"the spec file to use" default:"./swagger.json"`
+	APIPackage        string         `long:"api-package" short:"a" description:"the package to save the operations" default:"operations"`
+	ModelPackage      string         `long:"model-package" short:"m" description:"the package to save the models" default:"models"`
+	ServerPackage     string         `long:"server-package" short:"s" description:"the package to save the server specific code" default:"restapi"`
+	ClientPackage     string         `long:"client-package" short:"c" description:"the package to save the client specific code" default:"client"`
+	Target            flags.Filename `long:"target" short:"t" default:"./" description:"the base directory for generating the files"`
+	TemplateDir       flags.Filename `long:"template-dir"`
+	CustomFormatsFile flags.Filename `long:"custom-formats"`
 }
 
 // Server the command to generate an entire server application
@@ -62,6 +63,7 @@ func (s *Server) Execute(args []string) error {
 		IncludeResponses:  !s.SkipOperations,
 		IncludeMain:       s.IncludeMain,
 		TemplateDir:       string(s.TemplateDir),
+		CustomFormatsFile: string(s.CustomFormatsFile),
 	}
 
 	return generator.GenerateServer(s.Name, s.Models, s.Operations, opts)

@@ -37,6 +37,10 @@ func GenerateClient(name string, modelNames, operationIDs []string, opts GenOpts
 
 	compileTemplates()
 
+	if opts.CustomFormatsFile != "" {
+		loadCustomFormatsFile(opts.CustomFormatsFile)
+	}
+
 	// Load the spec
 	_, specDoc, err := loadSpec(opts.Spec)
 	if err != nil {

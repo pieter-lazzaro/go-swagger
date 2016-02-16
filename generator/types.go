@@ -15,7 +15,9 @@
 package generator
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"strings"
 
@@ -145,6 +147,33 @@ func init() {
 	swaggerTypeName = make(map[string]string)
 	for k, v := range typeMapping {
 		swaggerTypeName[v] = k
+	}
+}
+
+type customTypeMap struct {
+	GoType string `json:"goType"`
+	Zero   string `json:"zero"`
+}
+
+func loadCustomFormatsFile(mapFile string) {
+
+	buf, err := ioutil.ReadFile(mapFile)
+
+	if err != nil {
+		return
+	}
+
+	var customMaps map[string]customTypeMap
+
+	if err := json.Unmarshal(buf, &customMaps); err != nil {
+		return
+	}
+
+	for t, ct := range customMaps {
+		typeMapping[t] = ct.GoType
+		if ct.Zero != "" {
+			zeroes[t] = ct.Zero
+		}
 	}
 }
 

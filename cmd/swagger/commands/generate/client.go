@@ -48,6 +48,7 @@ func (c *Client) Execute(args []string) error {
 		IncludeParameters: !c.SkipOperations,
 		IncludeResponses:  !c.SkipOperations,
 		TemplateDir:       string(c.TemplateDir),
+		CustomFormatsFile: string(c.CustomFormatsFile),
 	}
 
 	//if !c.SkipModels && (len(c.Models) > 0 || len(c.Operations) == 0) {

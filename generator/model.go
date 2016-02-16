@@ -40,6 +40,10 @@ func GenerateDefinition(modelNames []string, includeModel, includeValidator bool
 
 	compileTemplates()
 
+	if opts.CustomFormatsFile != "" {
+		loadCustomFormatsFile(opts.CustomFormatsFile)
+	}
+
 	// Load the spec
 	specPath, specDoc, err := loadSpec(opts.Spec)
 	if err != nil {

@@ -39,13 +39,14 @@ func (m *Model) Execute(args []string) error {
 		!m.NoStruct,
 		!m.NoValidator,
 		generator.GenOpts{
-			Spec:          string(m.Spec),
-			Target:        string(m.Target),
-			APIPackage:    m.APIPackage,
-			ModelPackage:  m.ModelPackage,
-			ServerPackage: m.ServerPackage,
-			ClientPackage: m.ClientPackage,
-			DumpData:      m.DumpData,
-			TemplateDir:   string(m.TemplateDir),
+			Spec:              string(m.Spec),
+			Target:            string(m.Target),
+			APIPackage:        m.APIPackage,
+			ModelPackage:      m.ModelPackage,
+			ServerPackage:     m.ServerPackage,
+			ClientPackage:     m.ClientPackage,
+			DumpData:          m.DumpData,
+			TemplateDir:       string(m.TemplateDir),
+			CustomFormatsFile: string(m.CustomFormatsFile),
 		})
 }
