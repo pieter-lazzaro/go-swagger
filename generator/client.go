@@ -69,7 +69,7 @@ func GenerateClient(name string, modelNames, operationIDs []string, opts GenOpts
 		Operations:      operations,
 		Target:          opts.Target,
 		DumpData:        opts.DumpData,
-		Package:         mangleName(swag.ToFileName(opts.APIPackage), "api"),
+		Package:         mangleName(swag.ToFileName(opts.ClientPackage), "client"),
 		APIPackage:      mangleName(swag.ToFileName(opts.APIPackage), "api"),
 		ModelsPackage:   mangleName(swag.ToFileName(opts.ModelPackage), "definitions"),
 		ServerPackage:   mangleName(swag.ToFileName(opts.ServerPackage), "server"),
@@ -91,7 +91,6 @@ func (c *clientGenerator) Generate() error {
 	app, err := c.makeCodegenApp()
 	if app.Name == "" {
 		app.Name = "APIClient"
-		app.Package = "client"
 	}
 	app.DefaultImports = []string{filepath.ToSlash(filepath.Join(baseImport(c.Target), c.ModelsPackage))}
 	if err != nil {
@@ -158,7 +157,7 @@ func (c *clientGenerator) generateParameters(op *GenOperation) error {
 	}
 	log.Println("rendered client parameters template:", op.Package+"."+swag.ToGoName(op.Name)+"Parameters")
 
-	fp := filepath.Join(c.ClientPackage, c.Target)
+	fp := filepath.Join(c.Target, c.ClientPackage)
 	if len(op.Package) > 0 {
 		fp = filepath.Join(fp, op.Package)
 	}
@@ -173,7 +172,7 @@ func (c *clientGenerator) generateResponses(op *GenOperation) error {
 	}
 	log.Println("rendered client responses template:", op.Package+"."+swag.ToGoName(op.Name)+"Responses")
 
-	fp := filepath.Join(c.ClientPackage, c.Target)
+	fp := filepath.Join(c.Target, c.ClientPackage)
 	if len(op.Package) > 0 {
 		fp = filepath.Join(fp, op.Package)
 	}
@@ -188,7 +187,7 @@ func (c *clientGenerator) generateGroupClient(opGroup GenOperationGroup) error {
 	}
 	log.Println("rendered operation group client template:", opGroup.Name+"."+swag.ToGoName(opGroup.Name)+"Client")
 
-	fp := filepath.Join(c.ClientPackage, c.Target, opGroup.Name)
+	fp := filepath.Join(c.Target, c.ClientPackage, opGroup.Name)
 	return writeToFile(fp, swag.ToGoName(opGroup.Name)+"Client", buf.Bytes())
 }
 
@@ -200,7 +199,7 @@ func (c *clientGenerator) generateFacade(app *GenApp) error {
 	}
 	log.Println("rendered client facade template:", c.ClientPackage+"."+swag.ToGoName(app.Name)+"Client")
 
-	fp := filepath.Join(c.ClientPackage, c.Target)
+	fp := filepath.Join(c.Target, c.ClientPackage)
 	return writeToFile(fp, swag.ToGoName(app.Name)+"Client", buf.Bytes())
 }
 
@@ -212,6 +211,6 @@ func (c *clientGenerator) generateEmbeddedSwaggerJSON(app *GenApp) error {
 	}
 	log.Println("rendered client embedded swagger JSON template:", c.ClientPackage+"."+swag.ToGoName(app.Name)+"Client")
 
-	fp := filepath.Join(c.ClientPackage, c.Target)
+	fp := filepath.Join(c.Target, c.ClientPackage)
 	return writeToFile(fp, swag.ToGoName(app.Name)+"EmbeddedSpec", buf.Bytes())
 }

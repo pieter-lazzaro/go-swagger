@@ -6,7 +6,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // LogoutUserHandlerFunc turns a function with the right signature into a logout user handler
@@ -27,7 +27,7 @@ func NewLogoutUser(ctx *middleware.Context, handler LogoutUserHandler) *LogoutUs
 	return &LogoutUser{Context: ctx, Handler: handler}
 }
 
-/*LogoutUser swagger:route GET /user/logout user logoutUser
+/*LogoutUser swagger:route GET /users/logout user logoutUser
 
 Logs out current logged in user session
 

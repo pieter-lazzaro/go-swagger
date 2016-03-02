@@ -6,7 +6,7 @@ package store
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // GetOrderByIDHandlerFunc turns a function with the right signature into a get order by id handler
@@ -27,7 +27,7 @@ func NewGetOrderByID(ctx *middleware.Context, handler GetOrderByIDHandler) *GetO
 	return &GetOrderByID{Context: ctx, Handler: handler}
 }
 
-/*GetOrderByID swagger:route GET /store/order/{orderId} store getOrderById
+/*GetOrderByID swagger:route GET /stores/order/{orderId} store getOrderById
 
 Find purchase order by ID
 

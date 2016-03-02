@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // DeletePetHandlerFunc turns a function with the right signature into a delete pet handler
@@ -27,7 +27,7 @@ func NewDeletePet(ctx *middleware.Context, handler DeletePetHandler) *DeletePet 
 	return &DeletePet{Context: ctx, Handler: handler}
 }
 
-/*DeletePet swagger:route DELETE /pet/{petId} pet deletePet
+/*DeletePet swagger:route DELETE /pets/{petId} pet deletePet
 
 Deletes a pet
 

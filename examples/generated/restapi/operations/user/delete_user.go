@@ -6,7 +6,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // DeleteUserHandlerFunc turns a function with the right signature into a delete user handler
@@ -27,7 +27,7 @@ func NewDeleteUser(ctx *middleware.Context, handler DeleteUserHandler) *DeleteUs
 	return &DeleteUser{Context: ctx, Handler: handler}
 }
 
-/*DeleteUser swagger:route DELETE /user/{username} user deleteUser
+/*DeleteUser swagger:route DELETE /users/{username} user deleteUser
 
 Delete user
 

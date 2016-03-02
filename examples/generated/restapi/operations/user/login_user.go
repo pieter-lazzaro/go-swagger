@@ -6,7 +6,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // LoginUserHandlerFunc turns a function with the right signature into a login user handler
@@ -27,7 +27,7 @@ func NewLoginUser(ctx *middleware.Context, handler LoginUserHandler) *LoginUser 
 	return &LoginUser{Context: ctx, Handler: handler}
 }
 
-/*LoginUser swagger:route GET /user/login user loginUser
+/*LoginUser swagger:route GET /users/login user loginUser
 
 Logs user into the system
 

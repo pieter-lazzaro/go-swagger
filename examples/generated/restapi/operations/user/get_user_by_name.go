@@ -6,7 +6,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // GetUserByNameHandlerFunc turns a function with the right signature into a get user by name handler
@@ -27,7 +27,7 @@ func NewGetUserByName(ctx *middleware.Context, handler GetUserByNameHandler) *Ge
 	return &GetUserByName{Context: ctx, Handler: handler}
 }
 
-/*GetUserByName swagger:route GET /user/{username} user getUserByName
+/*GetUserByName swagger:route GET /users/{username} user getUserByName
 
 Get user by user name
 

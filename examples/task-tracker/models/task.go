@@ -4,10 +4,11 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-swagger/go-swagger/swag"
+
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit/validate"
-	"github.com/go-swagger/go-swagger/strfmt"
-	"github.com/go-swagger/go-swagger/swag"
 )
 
 /*Task a structure describing a complete task.
@@ -44,7 +45,7 @@ type Task struct {
 
 	Read Only: true
 	*/
-	LastUpdated strfmt.DateTime `json:"lastUpdated,omitempty"`
+	LastUpdated *strfmt.DateTime `json:"lastUpdated,omitempty"`
 
 	/* LastUpdatedBy last updated by
 	 */
@@ -165,7 +166,7 @@ type TaskAttachmentsAnon struct {
 
 	Read Only: true
 	*/
-	URL strfmt.URI `json:"url,omitempty"`
+	URL *strfmt.URI `json:"url,omitempty"`
 }
 
 // Validate validates this task attachments anon

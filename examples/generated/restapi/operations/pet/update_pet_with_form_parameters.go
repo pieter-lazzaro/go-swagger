@@ -9,8 +9,9 @@ import (
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit"
 	"github.com/go-swagger/go-swagger/httpkit/middleware"
-	"github.com/go-swagger/go-swagger/strfmt"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-swagger/go-swagger/httpkit/validate"
+
+	strfmt "github.com/go-swagger/go-swagger/strfmt"
 )
 
 // NewUpdatePetWithFormParams creates a new UpdatePetWithFormParams object
@@ -26,18 +27,20 @@ func NewUpdatePetWithFormParams() UpdatePetWithFormParams {
 // swagger:parameters updatePetWithForm
 type UpdatePetWithFormParams struct {
 	/*Updated name of the pet
+	  Required: true
 	  In: formData
 	*/
-	Name *string
+	Name string
 	/*ID of pet that needs to be updated
 	  Required: true
 	  In: path
 	*/
-	PetID int64
+	PetID string
 	/*Updated status of the pet
+	  Required: true
 	  In: formData
 	*/
-	Status *string
+	Status string
 }
 
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
@@ -45,7 +48,11 @@ type UpdatePetWithFormParams struct {
 func (o *UpdatePetWithFormParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		return err
+		if err != http.ErrNotMultipart {
+			return err
+		} else if err := r.ParseForm(); err != nil {
+			return err
+		}
 	}
 	fds := httpkit.Values(r.Form)
 
@@ -71,15 +78,18 @@ func (o *UpdatePetWithFormParams) BindRequest(r *http.Request, route *middleware
 }
 
 func (o *UpdatePetWithFormParams) bindName(rawData []string, hasKey bool, formats strfmt.Registry) error {
+	if !hasKey {
+		return errors.Required("name", "formData")
+	}
 	var raw string
 	if len(rawData) > 0 {
 		raw = rawData[len(rawData)-1]
 	}
-	if raw == "" { // empty values pass all other validations
-		return nil
+	if err := validate.RequiredString("name", "formData", raw); err != nil {
+		return err
 	}
 
-	o.Name = &raw
+	o.Name = raw
 
 	return nil
 }
@@ -90,25 +100,24 @@ func (o *UpdatePetWithFormParams) bindPetID(rawData []string, hasKey bool, forma
 		raw = rawData[len(rawData)-1]
 	}
 
-	value, err := swag.ConvertInt64(raw)
-	if err != nil {
-		return errors.InvalidType("petId", "path", "int64", raw)
-	}
-	o.PetID = value
+	o.PetID = raw
 
 	return nil
 }
 
 func (o *UpdatePetWithFormParams) bindStatus(rawData []string, hasKey bool, formats strfmt.Registry) error {
+	if !hasKey {
+		return errors.Required("status", "formData")
+	}
 	var raw string
 	if len(rawData) > 0 {
 		raw = rawData[len(rawData)-1]
 	}
-	if raw == "" { // empty values pass all other validations
-		return nil
+	if err := validate.RequiredString("status", "formData", raw); err != nil {
+		return err
 	}
 
-	o.Status = &raw
+	o.Status = raw
 
 	return nil
 }

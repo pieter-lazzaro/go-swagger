@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // FindPetsByTagsHandlerFunc turns a function with the right signature into a find pets by tags handler
@@ -27,7 +27,7 @@ func NewFindPetsByTags(ctx *middleware.Context, handler FindPetsByTagsHandler) *
 	return &FindPetsByTags{Context: ctx, Handler: handler}
 }
 
-/*FindPetsByTags swagger:route GET /pet/findByTags pet findPetsByTags
+/*FindPetsByTags swagger:route GET /pets/findByTags pet findPetsByTags
 
 Finds Pets by tags
 

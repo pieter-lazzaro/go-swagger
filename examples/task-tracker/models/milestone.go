@@ -4,9 +4,10 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	strfmt "github.com/go-swagger/go-swagger/strfmt"
+
 	"github.com/go-swagger/go-swagger/errors"
 	"github.com/go-swagger/go-swagger/httpkit/validate"
-	"github.com/go-swagger/go-swagger/strfmt"
 )
 
 /*Milestone A milestone is a particular goal that is important to the project for this issue tracker.
@@ -31,7 +32,7 @@ type Milestone struct {
 	This property is optional, but when present it lets people know when they can expect this milestone to be completed.
 
 	*/
-	DueDate strfmt.Date `json:"dueDate,omitempty"`
+	DueDate *strfmt.Date `json:"dueDate,omitempty"`
 
 	/* The name of the milestone.
 
@@ -97,15 +98,15 @@ type MilestoneStats struct {
 
 	/* The closed issues.
 	 */
-	Closed int32 `json:"closed,omitempty"`
+	Closed *int32 `json:"closed,omitempty"`
 
 	/* The remaining open issues.
 	 */
-	Open int32 `json:"open,omitempty"`
+	Open *int32 `json:"open,omitempty"`
 
 	/* The total number of issues for this milestone.
 	 */
-	Total int32 `json:"total,omitempty"`
+	Total *int32 `json:"total,omitempty"`
 }
 
 // Validate validates this milestone stats

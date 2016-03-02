@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // GetPetByIDHandlerFunc turns a function with the right signature into a get pet by id handler
@@ -27,11 +27,11 @@ func NewGetPetByID(ctx *middleware.Context, handler GetPetByIDHandler) *GetPetBy
 	return &GetPetByID{Context: ctx, Handler: handler}
 }
 
-/*GetPetByID swagger:route GET /pet/{petId} pet getPetById
+/*GetPetByID swagger:route GET /pets/{petId} pet getPetById
 
 Find pet by ID
 
-Returns a single pet
+Returns a pet when ID < 10.  ID > 10 or nonintegers will simulate API error conditions
 
 */
 type GetPetByID struct {

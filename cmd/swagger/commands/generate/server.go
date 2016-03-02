@@ -42,7 +42,9 @@ type Server struct {
 	SkipModels     bool     `long:"skip-models" description:"no models will be generated when this flag is specified"`
 	SkipOperations bool     `long:"skip-operations" description:"no operations will be generated when this flag is specified"`
 	SkipSupport    bool     `long:"skip-support" description:"no supporting files will be generated when this flag is specified"`
-	IncludeMain    bool     `long:"include-main" description:"overwrite main even if it exists already"`
+	ExcludeMain    bool     `long:"exclude-main" description:"exclude main function, so just generate the library"`
+	ExcludeSpec    bool     `long:"exclude-spec" description:"don't embed the swagger specification"`
+	WithContext    bool     `long:"with-context" description:"handlers get a context as first arg"`
 }
 
 // Execute runs this command
@@ -61,9 +63,12 @@ func (s *Server) Execute(args []string) error {
 		IncludeHandler:    !s.SkipOperations,
 		IncludeParameters: !s.SkipOperations,
 		IncludeResponses:  !s.SkipOperations,
-		IncludeMain:       s.IncludeMain,
+		IncludeMain:       !s.ExcludeMain,
+		IncludeSupport:    !s.SkipSupport,
+		ExcludeSpec:       s.ExcludeSpec,
 		TemplateDir:       string(s.TemplateDir),
 		CustomFormatsFile: string(s.CustomFormatsFile),
+		WithContext:       s.WithContext,
 	}
 
 	return generator.GenerateServer(s.Name, s.Models, s.Operations, opts)

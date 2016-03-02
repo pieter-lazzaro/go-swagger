@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // AddPetHandlerFunc turns a function with the right signature into a add pet handler
@@ -27,7 +27,7 @@ func NewAddPet(ctx *middleware.Context, handler AddPetHandler) *AddPet {
 	return &AddPet{Context: ctx, Handler: handler}
 }
 
-/*AddPet swagger:route POST /pet pet addPet
+/*AddPet swagger:route POST /pets pet addPet
 
 Add a new pet to the store
 

@@ -8,8 +8,9 @@ import (
 
 	"github.com/go-swagger/go-swagger/client"
 	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/strfmt"
 	"github.com/go-swagger/go-swagger/swag"
+
+	strfmt "github.com/go-swagger/go-swagger/strfmt"
 )
 
 // NewUploadTaskFileParams creates a new UploadTaskFileParams object
@@ -83,10 +84,12 @@ func (o *UploadTaskFileParams) WriteToRequest(r client.Request, reg strfmt.Regis
 	if o.File != nil {
 
 		if o.File != nil {
+
 			// form file param file
 			if err := r.SetFileParam("file", o.File); err != nil {
 				return err
 			}
+
 		}
 
 	}

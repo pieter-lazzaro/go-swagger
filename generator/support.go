@@ -33,7 +33,6 @@ import (
 
 // GenerateServer generates a server application
 func GenerateServer(name string, modelNames, operationIDs []string, opts GenOpts) error {
-
 	generator, err := newAppGenerator(name, modelNames, operationIDs, &opts)
 	if err != nil {
 		return err
@@ -167,43 +166,48 @@ func (a *appGenerator) Generate() error {
 		return nil
 	}
 
-	//if a.GenOpts.IncludeModel {
-	log.Printf("rendering %d models", len(app.Models))
-	for _, mod := range app.Models {
-		mod.IncludeValidator = true // a.GenOpts.IncludeValidator
-		gen := &definitionGenerator{
-			Name:    mod.Name,
-			SpecDoc: a.SpecDoc,
-			Target:  filepath.Join(a.Target, a.ModelsPackage),
-			Data:    &mod,
-		}
-		if err := gen.generateModel(); err != nil {
-			return err
-		}
-	}
-	//}
-
-	for _, opg := range app.OperationGroups {
-		for _, op := range opg.Operations {
-			gen := &opGen{
-				data:              &op,
-				pkg:               opg.Name,
-				cname:             swag.ToGoName(op.Name),
-				IncludeHandler:    a.GenOpts.IncludeHandler,
-				IncludeParameters: a.GenOpts.IncludeParameters,
-				IncludeResponses:  a.GenOpts.IncludeResponses,
-				Doc:               a.SpecDoc,
-				Target:            filepath.Join(a.Target, a.ServerPackage),
-				APIPackage:        a.APIPackage,
+	if a.GenOpts.IncludeModel {
+		log.Printf("rendering %d models", len(app.Models))
+		for _, mod := range app.Models {
+			mod.IncludeValidator = true // a.GenOpts.IncludeValidator
+			gen := &definitionGenerator{
+				Name:    mod.Name,
+				SpecDoc: a.SpecDoc,
+				Target:  filepath.Join(a.Target, a.ModelsPackage),
+				Data:    &mod,
 			}
-
-			if err := gen.Generate(); err != nil {
+			if err := gen.generateModel(); err != nil {
 				return err
 			}
 		}
 	}
 
-	return a.GenerateSupport(&app)
+	if a.GenOpts.IncludeHandler {
+		for _, opg := range app.OperationGroups {
+			for _, op := range opg.Operations {
+				gen := &opGen{
+					data:              &op,
+					pkg:               opg.Name,
+					cname:             swag.ToGoName(op.Name),
+					IncludeHandler:    a.GenOpts.IncludeHandler,
+					IncludeParameters: a.GenOpts.IncludeParameters,
+					IncludeResponses:  a.GenOpts.IncludeResponses,
+					Doc:               a.SpecDoc,
+					Target:            filepath.Join(a.Target, a.ServerPackage),
+					APIPackage:        a.APIPackage,
+				}
+
+				if err := gen.Generate(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	if a.GenOpts.IncludeSupport {
+		return a.GenerateSupport(&app)
+	}
+	return nil
 }
 
 func (a *appGenerator) GenerateSupport(ap *GenApp) error {
@@ -217,14 +221,24 @@ func (a *appGenerator) GenerateSupport(ap *GenApp) error {
 		app = &ca
 	}
 
+	if a.GenOpts == nil || !a.GenOpts.ExcludeSpec {
+		if err := a.generateEmbeddedSwaggerJSON(app); err != nil {
+			return err
+		}
+	}
+
+	importPath := filepath.ToSlash(filepath.Join(baseImport(a.Target), a.ServerPackage, a.APIPackage))
+	app.DefaultImports = append(
+		app.DefaultImports,
+		filepath.ToSlash(filepath.Join(baseImport(a.Target), a.ServerPackage)),
+		importPath,
+	)
+
 	if err := a.generateAPIBuilder(app); err != nil {
 		return err
 	}
 
-	importPath := filepath.ToSlash(filepath.Join(baseImport(a.Target), a.ServerPackage, a.APIPackage))
-	app.DefaultImports = append(app.DefaultImports, importPath)
-
-	if err := a.generateEmbeddedSwaggerJSON(app); err != nil {
+	if err := a.generateAPIServer(app); err != nil {
 		return err
 	}
 
@@ -236,15 +250,17 @@ func (a *appGenerator) GenerateSupport(ap *GenApp) error {
 		return err
 	}
 
-	if err := a.generateMain(app); err != nil {
-		return err
+	if a.GenOpts == nil || a.GenOpts.IncludeMain {
+		if err := a.generateMain(app); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (a *appGenerator) generateConfigureAPI(app *GenApp) error {
-	pth := filepath.Join(a.Target, "cmd", swag.ToCommandName(swag.ToGoName(app.Name)+"Server"))
+	pth := filepath.Join(a.Target, app.APIPackage)
 	nm := "Configure" + swag.ToGoName(app.Name)
 	if fileExists(pth, nm) {
 		log.Println("skipped (already exists) configure api template:", app.Package+".Configure"+swag.ToGoName(app.Name))
@@ -276,12 +292,12 @@ func (a *appGenerator) generateMain(app *GenApp) error {
 func (a *appGenerator) generateEmbeddedSwaggerJSON(app *GenApp) error {
 	buf := bytes.NewBuffer(nil)
 	appc := *app
-	appc.Package = "main"
+	appc.Package = app.APIPackage
 	if err := embeddedSpecTemplate.Execute(buf, &appc); err != nil {
 		return err
 	}
-	log.Println("rendered embedded Swagger JSON template:", "server."+swag.ToGoName(app.Name))
-	return writeToFile(filepath.Join(a.Target, "cmd", swag.ToCommandName(swag.ToGoName(app.Name)+"Server")), "embedded_spec", buf.Bytes())
+	log.Println("rendered embedded Swagger JSON template:", app.APIPackage+"."+swag.ToGoName(app.Name))
+	return writeToFile(filepath.Join(a.Target, a.ServerPackage), "embedded_spec", buf.Bytes())
 }
 
 func (a *appGenerator) generateAPIBuilder(app *GenApp) error {
@@ -293,13 +309,22 @@ func (a *appGenerator) generateAPIBuilder(app *GenApp) error {
 	return writeToFile(filepath.Join(a.Target, a.ServerPackage, app.Package), swag.ToGoName(app.Name)+"Api", buf.Bytes())
 }
 
+func (a *appGenerator) generateAPIServer(app *GenApp) error {
+	buf := bytes.NewBuffer(nil)
+	if err := serverTemplate.Execute(buf, app); err != nil {
+		return err
+	}
+	log.Println("rendered server template:", app.APIPackage+".Server")
+	return writeToFile(filepath.Join(a.Target, a.ServerPackage), "Server", buf.Bytes())
+}
+
 func (a *appGenerator) generateDoc(app *GenApp) error {
 	buf := bytes.NewBuffer(nil)
 	if err := mainDocTemplate.Execute(buf, app); err != nil {
 		return err
 	}
 	log.Println("rendered doc template:", app.Package+"."+swag.ToGoName(app.Name))
-	return writeToFile(filepath.Join(a.Target, "cmd", swag.ToCommandName(swag.ToGoName(app.Name)+"Server")), "Doc", buf.Bytes())
+	return writeToFile(filepath.Join(a.Target, a.ServerPackage), "Doc", buf.Bytes())
 }
 
 var mediaTypeNames = map[*regexp.Regexp]string{
@@ -316,16 +341,22 @@ var mediaTypeNames = map[*regexp.Regexp]string{
 	regexp.MustCompile("text/.*javascript"):          "js",
 	regexp.MustCompile("text/.*css"):                 "css",
 	regexp.MustCompile("text/.*plain"):               "txt",
+	regexp.MustCompile("application/.*octet-stream"): "bin",
+	regexp.MustCompile("application/.*tar"):          "tar",
+	regexp.MustCompile("application/.*gzip"):         "gzip",
+	regexp.MustCompile("application/.*gz"):           "gzip",
 }
 
 var knownProducers = map[string]string{
 	"json": "httpkit.JSONProducer",
 	"yaml": "httpkit.YAMLProducer",
+	"bin":  "httpkit.ByteStreamProducer",
 }
 
 var knownConsumers = map[string]string{
 	"json": "httpkit.JSONConsumer",
 	"yaml": "httpkit.YAMLConsumer",
+	"bin":  "httpkit.ByteStreamConsumer",
 }
 
 func getSerializer(sers []GenSerGroup, ext string) (*GenSerGroup, bool) {
@@ -548,6 +579,7 @@ func (a *appGenerator) makeCodegenApp() (GenApp, error) {
 		bldr.Authed = len(a.SpecDoc.SecurityRequirementsFor(o)) > 0
 		ap := a.APIPackage
 		bldr.RootAPIPackage = swag.ToFileName(a.APIPackage)
+		bldr.WithContext = a.GenOpts != nil && a.GenOpts.WithContext
 		if len(o.Tags) > 0 {
 			for _, tag := range o.Tags {
 				tns[tag] = struct{}{}
@@ -592,6 +624,7 @@ func (a *appGenerator) makeCodegenApp() (GenApp, error) {
 			Operations:     v,
 			DefaultImports: []string{filepath.ToSlash(filepath.Join(baseImport(a.Target), a.ModelsPackage))},
 			RootPackage:    a.APIPackage,
+			WithContext:    a.GenOpts != nil && a.GenOpts.WithContext,
 		}
 		opGroups = append(opGroups, opGroup)
 		var importPath string
@@ -635,6 +668,7 @@ func (a *appGenerator) makeCodegenApp() (GenApp, error) {
 	}
 
 	return GenApp{
+		APIPackage:          a.ServerPackage,
 		Package:             a.Package,
 		ReceiverName:        receiver,
 		Name:                a.Name,
@@ -655,63 +689,7 @@ func (a *appGenerator) makeCodegenApp() (GenApp, error) {
 		OperationGroups:     opGroups,
 		Principal:           prin,
 		SwaggerJSON:         fmt.Sprintf("%#v", jsonb),
+		ExcludeSpec:         a.GenOpts != nil && a.GenOpts.ExcludeSpec,
+		WithContext:         a.GenOpts != nil && a.GenOpts.WithContext,
 	}, nil
-}
-
-// GenApp represents all the meta data needed to generate an application
-// from a swagger spec
-type GenApp struct {
-	Package             string
-	ReceiverName        string
-	Name                string
-	Principal           string
-	DefaultConsumes     string
-	DefaultProduces     string
-	Host                string
-	BasePath            string
-	Info                *spec.Info
-	ExternalDocs        *spec.ExternalDocumentation
-	Imports             map[string]string
-	DefaultImports      []string
-	Schemes             []string
-	ExtraSchemes        []string
-	Consumes            []GenSerGroup
-	Produces            []GenSerGroup
-	SecurityDefinitions []GenSecurityScheme
-	Models              []GenDefinition
-	Operations          GenOperations
-	OperationGroups     GenOperationGroups
-	SwaggerJSON         string
-}
-
-// GenSerGroup represents a group of serializers, most likely this is a media type to a list of
-// prioritized serializers.
-type GenSerGroup struct {
-	ReceiverName   string
-	AppName        string
-	Name           string
-	MediaType      string
-	Implementation string
-	AllSerializers []GenSerializer
-}
-
-// GenSerializer represents a single serializer for a particular media type
-type GenSerializer struct {
-	ReceiverName   string
-	AppName        string
-	Name           string
-	MediaType      string
-	Implementation string
-}
-
-// GenSecurityScheme represents a security scheme for code generation
-type GenSecurityScheme struct {
-	AppName      string
-	ID           string
-	Name         string
-	ReceiverName string
-	IsBasicAuth  bool
-	IsAPIKeyAuth bool
-	Source       string
-	Principal    string
 }

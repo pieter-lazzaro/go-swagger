@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // UpdatePetHandlerFunc turns a function with the right signature into a update pet handler
@@ -27,7 +27,7 @@ func NewUpdatePet(ctx *middleware.Context, handler UpdatePetHandler) *UpdatePet 
 	return &UpdatePet{Context: ctx, Handler: handler}
 }
 
-/*UpdatePet swagger:route PUT /pet pet updatePet
+/*UpdatePet swagger:route PUT /pets pet updatePet
 
 Update an existing pet
 

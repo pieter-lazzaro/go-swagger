@@ -6,7 +6,7 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // UpdatePetWithFormHandlerFunc turns a function with the right signature into a update pet with form handler
@@ -27,7 +27,7 @@ func NewUpdatePetWithForm(ctx *middleware.Context, handler UpdatePetWithFormHand
 	return &UpdatePetWithForm{Context: ctx, Handler: handler}
 }
 
-/*UpdatePetWithForm swagger:route POST /pet/{petId} pet updatePetWithForm
+/*UpdatePetWithForm swagger:route POST /pets/{petId} pet updatePetWithForm
 
 Updates a pet in the store with form data
 

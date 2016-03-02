@@ -6,7 +6,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // UpdateUserHandlerFunc turns a function with the right signature into a update user handler
@@ -27,7 +27,7 @@ func NewUpdateUser(ctx *middleware.Context, handler UpdateUserHandler) *UpdateUs
 	return &UpdateUser{Context: ctx, Handler: handler}
 }
 
-/*UpdateUser swagger:route PUT /user/{username} user updateUser
+/*UpdateUser swagger:route PUT /users/{username} user updateUser
 
 Updated user
 

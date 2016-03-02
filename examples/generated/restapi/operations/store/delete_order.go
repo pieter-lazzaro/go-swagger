@@ -6,7 +6,7 @@ package store
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
 )
 
 // DeleteOrderHandlerFunc turns a function with the right signature into a delete order handler
@@ -27,7 +27,7 @@ func NewDeleteOrder(ctx *middleware.Context, handler DeleteOrderHandler) *Delete
 	return &DeleteOrder{Context: ctx, Handler: handler}
 }
 
-/*DeleteOrder swagger:route DELETE /store/order/{orderId} store deleteOrder
+/*DeleteOrder swagger:route DELETE /stores/order/{orderId} store deleteOrder
 
 Delete purchase order by ID
 

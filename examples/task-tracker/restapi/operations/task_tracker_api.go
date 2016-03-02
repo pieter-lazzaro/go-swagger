@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
-	"github.com/go-swagger/go-swagger/httpkit/security"
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/strfmt"
+	httpkit "github.com/go-swagger/go-swagger/httpkit"
+	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
+	security "github.com/go-swagger/go-swagger/httpkit/security"
+	spec "github.com/go-swagger/go-swagger/spec"
+	strfmt "github.com/go-swagger/go-swagger/strfmt"
 	"github.com/go-swagger/go-swagger/swag"
 
 	"github.com/go-swagger/go-swagger/examples/task-tracker/restapi/operations/tasks"
@@ -52,13 +52,13 @@ type TaskTrackerAPI struct {
 	// JSONProducer registers a producer for a "application/vnd.goswagger.examples.task-tracker.v1+json" mime type
 	JSONProducer httpkit.Producer
 
-	// APIKeyAuth registers a function that takes a token and returns a principal
-	// it performs authentication based on an api key token provided in the query
-	APIKeyAuth func(string) (interface{}, error)
-
 	// TokenHeaderAuth registers a function that takes a token and returns a principal
 	// it performs authentication based on an api key X-Token provided in the header
 	TokenHeaderAuth func(string) (interface{}, error)
+
+	// APIKeyAuth registers a function that takes a token and returns a principal
+	// it performs authentication based on an api key token provided in the query
+	APIKeyAuth func(string) (interface{}, error)
 
 	// TasksAddCommentToTaskHandler sets the operation handler for the add comment to task operation
 	TasksAddCommentToTaskHandler tasks.AddCommentToTaskHandler
@@ -131,12 +131,12 @@ func (o *TaskTrackerAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
-	if o.APIKeyAuth == nil {
-		unregistered = append(unregistered, "TokenAuth")
-	}
-
 	if o.TokenHeaderAuth == nil {
 		unregistered = append(unregistered, "XTokenAuth")
+	}
+
+	if o.APIKeyAuth == nil {
+		unregistered = append(unregistered, "TokenAuth")
 	}
 
 	if o.TasksAddCommentToTaskHandler == nil {
@@ -190,13 +190,13 @@ func (o *TaskTrackerAPI) AuthenticatorsFor(schemes map[string]spec.SecuritySchem
 	for name, scheme := range schemes {
 		switch name {
 
-		case "api_key":
-
-			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.APIKeyAuth(tok) })
-
 		case "token_header":
 
 			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.TokenHeaderAuth(tok) })
+
+		case "api_key":
+
+			result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return o.APIKeyAuth(tok) })
 
 		}
 	}
