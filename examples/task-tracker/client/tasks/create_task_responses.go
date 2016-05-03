@@ -5,11 +5,13 @@ package tasks
 
 import (
 	"fmt"
+	"io"
 
-	"github.com/go-swagger/go-swagger/client"
-	"github.com/go-swagger/go-swagger/httpkit"
+	"github.com/go-openapi/runtime"
 
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
+
+	"github.com/go-swagger/go-swagger/examples/task-tracker/models"
 )
 
 // CreateTaskReader is a Reader for the CreateTask structure.
@@ -18,7 +20,7 @@ type CreateTaskReader struct {
 }
 
 // ReadResponse reads a server response into the recieved o.
-func (o *CreateTaskReader) ReadResponse(response client.Response, consumer httpkit.Consumer) (interface{}, error) {
+func (o *CreateTaskReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
 
 	case 201:
@@ -53,7 +55,7 @@ func (o *CreateTaskCreated) Error() string {
 	return fmt.Sprintf("[POST /tasks][%d] createTaskCreated ", 201)
 }
 
-func (o *CreateTaskCreated) readResponse(response client.Response, consumer httpkit.Consumer, formats strfmt.Registry) error {
+func (o *CreateTaskCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	return nil
 }
@@ -67,10 +69,14 @@ func NewCreateTaskDefault(code int) *CreateTaskDefault {
 
 /*CreateTaskDefault handles this case with default header values.
 
-CreateTaskDefault create task default
+Error response
 */
 type CreateTaskDefault struct {
 	_statusCode int
+
+	XErrorCode string
+
+	Payload *models.Error
 }
 
 // Code gets the status code for the create task default response
@@ -79,10 +85,20 @@ func (o *CreateTaskDefault) Code() int {
 }
 
 func (o *CreateTaskDefault) Error() string {
-	return fmt.Sprintf("[POST /tasks][%d] createTask default ", o._statusCode)
+	return fmt.Sprintf("[POST /tasks][%d] createTask default  %+v", o._statusCode, o.Payload)
 }
 
-func (o *CreateTaskDefault) readResponse(response client.Response, consumer httpkit.Consumer, formats strfmt.Registry) error {
+func (o *CreateTaskDefault) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// response header X-Error-Code
+	o.XErrorCode = response.GetHeader("X-Error-Code")
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
 
 	return nil
 }

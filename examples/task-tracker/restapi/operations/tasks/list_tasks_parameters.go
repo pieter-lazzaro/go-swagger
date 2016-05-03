@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
-	"github.com/go-swagger/go-swagger/httpkit/validate"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // NewListTasksParams creates a new ListTasksParams object
@@ -32,6 +32,10 @@ func NewListTasksParams() ListTasksParams {
 //
 // swagger:parameters listTasks
 type ListTasksParams struct {
+
+	// HTTP Request Object
+	HTTPRequest *http.Request
+
 	/*Amount of items to return in a single page
 	  In: query
 	  Default: 20
@@ -58,7 +62,9 @@ type ListTasksParams struct {
 // for simple values it will use straight method calls
 func (o *ListTasksParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
-	qs := httpkit.Values(r.URL.Query())
+	o.HTTPRequest = r
+
+	qs := runtime.Values(r.URL.Query())
 
 	qPageSize, qhkPageSize, _ := qs.GetOK("pageSize")
 	if err := o.bindPageSize(qPageSize, qhkPageSize, route.Formats); err != nil {
@@ -143,7 +149,7 @@ func (o *ListTasksParams) bindStatus(rawData []string, hasKey bool, formats strf
 	var ir []string
 	iValidateElement := func(i int, statusI string) *errors.Validation {
 
-		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", o.Status[i], []interface{}{"open", "closed", "ignored", "rejected"}); err != nil {
+		if err := validate.Enum(fmt.Sprintf("%s.%v", "status", i), "query", statusI, []interface{}{"open", "closed", "ignored", "rejected"}); err != nil {
 			return err
 		}
 

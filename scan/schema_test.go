@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -226,6 +226,7 @@ func TestAliasedTypes(t *testing.T) {
 	assertArrayProperty(t, &schema, "string", "manyModsTimed", "date-time", "ManyModsTimed")
 	assertArrayRef(t, &schema, "manyModsPetted", "ManyModsPetted", "#/definitions/pet")
 	assertArrayProperty(t, &schema, "string", "manyModsDated", "date-time", "ManyModsDated")
+	assertArrayRef(t, &schema, "manyModsPettedPtr", "ManyModsPettedPtr", "#/definitions/pet")
 
 	assertArrayProperty(t, &schema, "string", "modsNameds", "", "ModsNameds")
 	assertArrayProperty(t, &schema, "integer", "modsNumbereds", "int64", "ModsNumbereds")
@@ -481,5 +482,19 @@ func TestInterfaceDiscriminators(t *testing.T) {
 		sch = schema.AllOf[1]
 		assert.Len(t, sch.Properties, 1)
 		assertProperty(t, &sch, "string", "edition", "", "Edition")
+	}
+
+	schema, ok = noModelDefs["modelA"]
+	if assert.True(t, ok) {
+
+		cl, _ := schema.Extensions.GetString("x-go-name")
+		assert.Equal(t, "ModelA", cl)
+
+		sch, ok := schema.Properties["Tesla"]
+		if assert.True(t, ok) {
+			assert.Equal(t, "#/definitions/TeslaCar", sch.Ref.String())
+		}
+
+		assertProperty(t, &schema, "integer", "doors", "int64", "Doors")
 	}
 }

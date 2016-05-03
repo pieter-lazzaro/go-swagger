@@ -1,12 +1,12 @@
 package restapi
 
 import (
-	"io"
+	"crypto/tls"
 	"net/http"
 
-	errors "github.com/go-swagger/go-swagger/errors"
-	httpkit "github.com/go-swagger/go-swagger/httpkit"
-	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
+	errors "github.com/go-openapi/errors"
+	runtime "github.com/go-openapi/runtime"
+	middleware "github.com/go-openapi/runtime/middleware"
 
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations"
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations/pet"
@@ -16,21 +16,23 @@ import (
 
 // This file is safe to edit. Once it exists it will not be overwritten
 
+func configureFlags(api *operations.PetstoreAPI) {
+	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
+}
+
 func configureAPI(api *operations.PetstoreAPI) http.Handler {
 	// configure the api here
 	api.ServeError = errors.ServeError
 
-	api.JSONConsumer = httpkit.JSONConsumer()
+	api.XMLConsumer = runtime.XMLConsumer()
 
-	api.XMLConsumer = httpkit.ConsumerFunc(func(r io.Reader, target interface{}) error {
-		return errors.NotImplemented("xml consumer has not yet been implemented")
-	})
+	api.JSONConsumer = runtime.JSONConsumer()
 
-	api.JSONProducer = httpkit.JSONProducer()
+	api.UrlformConsumer = runtime.DiscardConsumer
 
-	api.XMLProducer = httpkit.ProducerFunc(func(w io.Writer, data interface{}) error {
-		return errors.NotImplemented("xml producer has not yet been implemented")
-	})
+	api.JSONProducer = runtime.JSONProducer()
+
+	api.XMLProducer = runtime.XMLProducer()
 
 	api.APIKeyAuth = func(token string) (interface{}, error) {
 		return nil, errors.NotImplemented("api key auth (api_key) api_key from header has not yet been implemented")
@@ -92,9 +94,13 @@ func configureAPI(api *operations.PetstoreAPI) http.Handler {
 	})
 
 	api.ServerShutdown = func() {}
-	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }
 
 	return setupGlobalMiddleware(api.Serve(setupMiddlewares))
+}
+
+// The TLS configuration before HTTPS server starts.
+func configureTLS(tlsConfig *tls.Config) {
+	// Make all necessary changes to the TLS configuration here.
 }
 
 // The middleware configuration is for the handler executors. These do not apply to the swagger.json document.

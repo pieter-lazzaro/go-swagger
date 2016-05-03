@@ -6,11 +6,11 @@ package pet
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/runtime/middleware"
 
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // NewFindPetsByStatusParams creates a new FindPetsByStatusParams object
@@ -25,6 +25,10 @@ func NewFindPetsByStatusParams() FindPetsByStatusParams {
 //
 // swagger:parameters findPetsByStatus
 type FindPetsByStatusParams struct {
+
+	// HTTP Request Object
+	HTTPRequest *http.Request
+
 	/*Status values that need to be considered for filter
 	  In: query
 	  Collection Format: multi
@@ -36,7 +40,9 @@ type FindPetsByStatusParams struct {
 // for simple values it will use straight method calls
 func (o *FindPetsByStatusParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
-	qs := httpkit.Values(r.URL.Query())
+	o.HTTPRequest = r
+
+	qs := runtime.Values(r.URL.Query())
 
 	qStatus, qhkStatus, _ := qs.GetOK("status")
 	if err := o.bindStatus(qStatus, qhkStatus, route.Formats); err != nil {

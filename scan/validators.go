@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-openapi/spec"
 )
 
 type validationBuilder interface {
@@ -485,11 +485,12 @@ func (ss *setSecurityDefinitions) Parse(lines []string) error {
 		var key string
 
 		if len(kv) > 1 {
-			scs := strings.Split(rxNotAlNumSpaceComma.ReplaceAllString(kv[1], ""), ",")
+			scs := strings.Split(kv[1], ",")
 			for _, scope := range scs {
 				tr := strings.TrimSpace(scope)
 				if tr != "" {
-					scopes = append(scopes, strings.TrimSpace(scope))
+					tr = strings.SplitAfter(tr, " ")[0]
+					scopes = append(scopes, strings.TrimSpace(tr))
 				}
 			}
 

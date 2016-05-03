@@ -25,11 +25,28 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/analysis"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 )
 
-// GenerateDefinition generates a model file for a schema defintion.
+/*
+Rewrite specification document first:
+
+* anonymous objects
+* tuples
+* extensible objects (properties + additionalProperties)
+* AllOfs when they match the rewrite criteria (not a nullable allOf)
+
+Find string enums and generate specialized idiomatic enum with them
+
+Every action that happens tracks the path which is a linked list of refs
+
+
+*/
+
+// GenerateDefinition generates a model file for a schema definition.
 func GenerateDefinition(modelNames []string, includeModel, includeValidator bool, opts GenOpts) error {
 
 	if opts.TemplateDir != "" {
@@ -85,7 +102,7 @@ func GenerateDefinition(modelNames []string, includeModel, includeValidator bool
 type definitionGenerator struct {
 	Name             string
 	Model            spec.Schema
-	SpecDoc          *spec.Document
+	SpecDoc          *loads.Document
 	Target           string
 	IncludeModel     bool
 	IncludeValidator bool
@@ -135,15 +152,16 @@ func (m *definitionGenerator) generateModel() error {
 	return writeToFile(m.Target, m.Name, buf.Bytes())
 }
 
-func makeGenDefinition(name, pkg string, schema spec.Schema, specDoc *spec.Document) (*GenDefinition, error) {
+func makeGenDefinition(name, pkg string, schema spec.Schema, specDoc *loads.Document) (*GenDefinition, error) {
 	return makeGenDefinitionHierarchy(name, pkg, "", schema, specDoc)
 }
-func makeGenDefinitionHierarchy(name, pkg, container string, schema spec.Schema, specDoc *spec.Document) (*GenDefinition, error) {
+func makeGenDefinitionHierarchy(name, pkg, container string, schema spec.Schema, specDoc *loads.Document) (*GenDefinition, error) {
 	receiver := "m"
 	resolver := newTypeResolver("", specDoc)
 	resolver.ModelName = name
+	analyzed := analysis.New(specDoc.Spec())
 
-	di := discriminatorInfo(specDoc)
+	di := discriminatorInfo(analyzed)
 
 	pg := schemaGenContext{
 		Path:           "",
@@ -227,9 +245,9 @@ func makeGenDefinitionHierarchy(name, pkg, container string, schema spec.Schema,
 	var defaultImports []string
 	if pg.GenSchema.HasValidations {
 		defaultImports = []string{
-			"github.com/go-swagger/go-swagger/errors",
-			"github.com/go-swagger/go-swagger/httpkit",
-			"github.com/go-swagger/go-swagger/httpkit/validate",
+			"github.com/go-openapi/errors",
+			"github.com/go-openapi/runtime",
+			"github.com/go-openapi/validate",
 		}
 	}
 	var extras []GenSchema
@@ -346,7 +364,7 @@ func (sg *schemaGenContext) NewAdditionalItems(schema *spec.Schema) *schemaGenCo
 
 func (sg *schemaGenContext) NewTupleElement(schema *spec.Schema, index int) *schemaGenContext {
 	if Debug {
-		log.Printf("New Tuple element\n")
+		log.Printf("New tuple element\n")
 	}
 
 	pg := sg.shallowClone()
@@ -423,7 +441,7 @@ func (sg *schemaGenContext) NewCompositionBranch(schema spec.Schema, index int) 
 
 func (sg *schemaGenContext) NewAdditionalProperty(schema spec.Schema) *schemaGenContext {
 	if Debug {
-		log.Printf("new additional property %s", sg.Name)
+		log.Printf("new additional property %s (expr: %s)", sg.Name, sg.ValueExpr)
 	}
 	pg := sg.shallowClone()
 	pg.Schema = schema
@@ -444,8 +462,10 @@ func hasValidations(model *spec.Schema, isRequired bool) (needsValidation bool, 
 	hasNumberValidation := model.Maximum != nil || model.Minimum != nil || model.MultipleOf != nil
 	hasStringValidation := model.MaxLength != nil || model.MinLength != nil || model.Pattern != ""
 	hasSliceValidations := model.MaxItems != nil || model.MinItems != nil || model.UniqueItems
+	simpleObject := len(model.Properties) > 0 && model.Discriminator == ""
+
 	needsValidation = hasNumberValidation || hasStringValidation || hasSliceValidations || len(model.Enum) > 0
-	hasValidation = isRequired || needsValidation
+	hasValidation = isRequired || needsValidation || simpleObject
 	return
 }
 
@@ -809,7 +829,7 @@ func (sg *schemaGenContext) buildAdditionalProperties() error {
 	}
 
 	if !sg.GenSchema.IsMap && (sg.GenSchema.IsAdditionalProperties && sg.Named) {
-		sg.GenSchema.ValueExpression += "." + sg.GenSchema.Name
+		sg.GenSchema.ValueExpression += "." + swag.ToGoName(sg.GenSchema.Name)
 		comprop := sg.NewAdditionalProperty(*addp.Schema)
 		comprop.Required = true
 		if err := comprop.makeGenSchema(); err != nil {
@@ -859,7 +879,9 @@ func (sg *schemaGenContext) buildAdditionalProperties() error {
 }
 
 func (sg *schemaGenContext) makeNewStruct(name string, schema spec.Schema) *schemaGenContext {
-	//fmt.Println("making new struct", name, sg.Container)
+	if Debug {
+		log.Println("making new struct", name, sg.Container)
+	}
 	sp := sg.TypeResolver.Doc.Spec()
 	name = swag.ToGoName(name)
 	if sg.TypeResolver.ModelName != sg.Name {
@@ -884,7 +906,7 @@ func (sg *schemaGenContext) makeNewStruct(name string, schema spec.Schema) *sche
 	}
 	if schema.Ref.String() == "" {
 		resolver := newTypeResolver(sg.TypeResolver.ModelsPackage, sg.TypeResolver.Doc)
-		resolver.ModelName = sg.TypeResolver.ModelName
+		resolver.ModelName = name //sg.TypeResolver.ModelName
 		pg.TypeResolver = resolver
 	}
 	pg.GenSchema.IsVirtual = true
@@ -894,7 +916,7 @@ func (sg *schemaGenContext) makeNewStruct(name string, schema spec.Schema) *sche
 }
 
 func (sg *schemaGenContext) buildArray() error {
-	tpe, err := sg.TypeResolver.ResolveSchema(sg.Schema.Items.Schema, true, true)
+	tpe, err := sg.TypeResolver.ResolveSchema(sg.Schema.Items.Schema, true, false)
 	if err != nil {
 		return err
 	}
@@ -913,20 +935,34 @@ func (sg *schemaGenContext) buildArray() error {
 		}
 		return nil
 	}
+
 	elProp := sg.NewSliceBranch(sg.Schema.Items.Schema)
 	elProp.Required = true
 	if err := elProp.makeGenSchema(); err != nil {
 		return err
 	}
+
 	sg.MergeResult(elProp, false)
 	sg.GenSchema.IsBaseType = elProp.GenSchema.IsBaseType
 	sg.GenSchema.ItemsEnum = elProp.GenSchema.Enum
 	elProp.GenSchema.Suffix = "Items"
 	sg.GenSchema.GoType = "[]" + elProp.GenSchema.GoType
-	if elProp.GenSchema.IsNullable && !elProp.GenSchema.HasDiscriminator && !elProp.GenSchema.IsPrimitive {
+
+	// TODO: this is probably not right. Should just respect what type resolvers said
+	nn := elProp.GenSchema.IsNullable
+	elProp.GenSchema.IsNullable = sg.TypeResolver.IsNullable(sg.Schema.Items.Schema) && !elProp.GenSchema.HasDiscriminator
+	if nn && !elProp.GenSchema.HasDiscriminator && !elProp.GenSchema.IsPrimitive {
 		sg.GenSchema.GoType = "[]*" + elProp.GenSchema.GoType
 	}
-	sg.GenSchema.Items = &elProp.GenSchema
+
+	schemaCopy := elProp.GenSchema
+	schemaCopy.Required = false
+	hv, _ := hasValidations(sg.Schema.Items.Schema, false)
+	schemaCopy.HasValidations = elProp.GenSchema.IsNullable || hv
+	sg.GenSchema.Items = &schemaCopy
+	if sg.Named {
+		sg.GenSchema.AliasedType = sg.GenSchema.GoType
+	}
 	return nil
 }
 

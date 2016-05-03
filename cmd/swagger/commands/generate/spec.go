@@ -20,8 +20,9 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/spec"
 	"github.com/go-swagger/go-swagger/scan"
-	"github.com/go-swagger/go-swagger/spec"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -61,7 +62,7 @@ func loadSpec(input string) (*spec.Swagger, error) {
 		if fi.IsDir() {
 			return nil, fmt.Errorf("expected %q to be a file not a directory", input)
 		}
-		sp, err := spec.Load(input)
+		sp, err := loads.Spec(input)
 		if err != nil {
 			return nil, err
 		}

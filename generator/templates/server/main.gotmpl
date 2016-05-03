@@ -5,7 +5,7 @@ import (
   "os"
   "net/http"
 
-  spec "github.com/go-swagger/go-swagger/spec"
+  loads "github.com/go-openapi/loads"
 	flags "github.com/jessevdk/go-flags"
 	graceful "github.com/tylerb/graceful"
 
@@ -20,7 +20,7 @@ import (
 
 func main() { {{ if .ExcludeSpec }}
   server := {{ .APIPackage }}.NewServer(nil){{ else }}
-  swaggerSpec, err := spec.New({{ .APIPackage }}.SwaggerJSON, "")
+  swaggerSpec, err := loads.Analyzed({{ .APIPackage }}.SwaggerJSON, "")
   if err != nil {
     log.Fatalln(err)
   }
@@ -33,15 +33,18 @@ func main() { {{ if .ExcludeSpec }}
   parser.ShortDescription = {{ if .Info }}{{ if .Info.Title }}`{{ .Info.Title }}`{{ else }}{{ if .ExcludeSpec }}""{{ else }}swaggerSpec.Spec().Info.Title{{ end }}{{ end }}{{ else }}{{ if .ExcludeSpec }}""{{ else }}swaggerSpec.Spec().Info.Title{{ end }}{{ end}}
   parser.LongDescription = {{ if .Info }}{{ if .Info.Description }}`{{ .Info.Description }}`{{ else }}{{ if .ExcludeSpec }}""{{ else }}swaggerSpec.Spec().Info.Description{{ end }}{{ end }}{{ else }}{{ if .ExcludeSpec }}""{{ else }}swaggerSpec.Spec().Info.Description{{ end }}{{ end}}
 
-  {{ if not .ExcludeSpec }}for _, optsGroup := range api.CommandLineOptionsGroups {
+
+  {{ if not .ExcludeSpec }}
+  server.ConfigureFlags()
+  for _, optsGroup := range api.CommandLineOptionsGroups {
     parser.AddGroup(optsGroup.ShortDescription, optsGroup.LongDescription, optsGroup.Options)
   }
   {{ end }}
 	if _, err := parser.Parse(); err != nil {
-		log.Fatalln(err)
+    os.Exit(1)
 	}
   {{ if .ExcludeSpec }}
-  swaggerSpec, err := spec.Load(string(server.Spec))
+  swaggerSpec, err := loads.Spec(string(server.Spec))
   if err != nil {
     log.Fatalln(err)
   }
@@ -50,6 +53,9 @@ func main() { {{ if .ExcludeSpec }}
   server.SetAPI(api)
   defer server.Shutdown()
   {{ end }}
+
+  server.ConfigureAPI()
+
   if err := server.Serve(); err != nil {
     log.Fatalln(err)
   }

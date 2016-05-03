@@ -4,46 +4,44 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"strconv"
+	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
-	"github.com/go-swagger/go-swagger/swag"
-
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit/validate"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/validate"
 )
 
-/*Pet Pet pet
+/*Pet pet
 
 swagger:model Pet
 */
 type Pet struct {
 
-	/* Category category
+	/* category
 	 */
 	Category *Category `json:"category,omitempty"`
 
-	/* ID id
+	/* id
 	 */
-	ID *int64 `json:"id,omitempty"`
+	ID int64 `json:"id,omitempty"`
 
-	/* Name name
-
-	Required: true
-	*/
-	Name string `json:"name,omitempty"`
-
-	/* PhotoUrls photo urls
+	/* name
 
 	Required: true
 	*/
-	PhotoUrls []string `json:"photoUrls,omitempty"`
+	Name *string `json:"name"`
+
+	/* photo urls
+
+	Required: true
+	*/
+	PhotoUrls []string `json:"photoUrls"`
 
 	/* pet status in the store
 	 */
-	Status *string `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
 
-	/* Tags tags
+	/* tags
 	 */
 	Tags []*Tag `json:"tags,omitempty"`
 }
@@ -75,7 +73,7 @@ func (m *Pet) Validate(formats strfmt.Registry) error {
 
 func (m *Pet) validateName(formats strfmt.Registry) error {
 
-	if err := validate.RequiredString("name", "body", string(m.Name)); err != nil {
+	if err := validate.Required("name", "body", m.Name); err != nil {
 		return err
 	}
 
@@ -88,14 +86,6 @@ func (m *Pet) validatePhotoUrls(formats strfmt.Registry) error {
 		return err
 	}
 
-	for i := 0; i < len(m.PhotoUrls); i++ {
-
-		if err := validate.RequiredString("photoUrls"+"."+strconv.Itoa(i), "body", string(m.PhotoUrls[i])); err != nil {
-			return err
-		}
-
-	}
-
 	return nil
 }
 
@@ -103,17 +93,6 @@ func (m *Pet) validateTags(formats strfmt.Registry) error {
 
 	if swag.IsZero(m.Tags) { // not required
 		return nil
-	}
-
-	for i := 0; i < len(m.Tags); i++ {
-
-		if m.Tags[i] != nil {
-
-			if err := m.Tags[i].Validate(formats); err != nil {
-				return err
-			}
-		}
-
 	}
 
 	return nil

@@ -24,8 +24,8 @@ import (
 
 	"golang.org/x/tools/go/loader"
 
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 )
 
 const (
@@ -72,7 +72,6 @@ var (
 			rxOpID + "\\p{Zs}*$")
 
 	rxSpace              = regexp.MustCompile("\\p{Zs}+")
-	rxNotAlNumSpaceComma = regexp.MustCompile("[^\\p{L}\\p{N}\\p{Zs},]")
 	rxPunctuationEnd     = regexp.MustCompile("\\p{Po}$")
 	rxStripComments      = regexp.MustCompile("^[^\\p{L}\\p{N}\\p{Pd}\\p{Pc}\\+]*")
 	rxStripTitleComments = regexp.MustCompile("^[^\\p{L}]*[Pp]ackage\\p{Zs}+[^\\p{Zs}]+\\p{Zs}*")
@@ -300,7 +299,7 @@ func (a *appScanner) processDiscovered() error {
 		}
 		a.discovered = nil
 		for _, sd := range queue {
-			if err := a.parseSchema(sd.File); err != nil {
+			if err := a.parseDiscoveredSchema(sd); err != nil {
 				return err
 			}
 		}
@@ -313,6 +312,17 @@ func (a *appScanner) processDiscovered() error {
 func (a *appScanner) parseSchema(file *ast.File) error {
 	sp := newSchemaParser(a.prog)
 	if err := sp.Parse(file, a.definitions); err != nil {
+		return err
+	}
+	a.discovered = append(a.discovered, sp.postDecls...)
+	return nil
+}
+
+func (a *appScanner) parseDiscoveredSchema(sd schemaDecl) error {
+	sp := newSchemaParser(a.prog)
+	sp.discovered = &sd
+
+	if err := sp.Parse(sd.File, a.definitions); err != nil {
 		return err
 	}
 	a.discovered = append(a.discovered, sp.postDecls...)
@@ -376,7 +386,7 @@ func swaggerSchemaForType(typeName string, prop swaggerTypable) error {
 	switch typeName {
 	case "bool":
 		prop.Typed("boolean", "")
-	case "rune", "string":
+	case "error", "rune", "string":
 		prop.Typed("string", "")
 	case "int8":
 		prop.Typed("integer", "int8")

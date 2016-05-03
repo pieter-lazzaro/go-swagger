@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/go-swagger/go-swagger/client"
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/swag"
 
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
 
 	"github.com/go-swagger/go-swagger/examples/task-tracker/models"
 )
@@ -23,7 +22,7 @@ type ListTasksReader struct {
 }
 
 // ReadResponse reads a server response into the recieved o.
-func (o *ListTasksReader) ReadResponse(response client.Response, consumer httpkit.Consumer) (interface{}, error) {
+func (o *ListTasksReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
 	switch response.Code() {
 
 	case 200:
@@ -70,7 +69,7 @@ func (o *ListTasksOK) Error() string {
 	return fmt.Sprintf("[GET /tasks][%d] listTasksOK  %+v", 200, o.Payload)
 }
 
-func (o *ListTasksOK) readResponse(response client.Response, consumer httpkit.Consumer, formats strfmt.Registry) error {
+func (o *ListTasksOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	// response header X-Last-Task-Id
 	xLastTaskId, err := swag.ConvertInt64(response.GetHeader("X-Last-Task-Id"))
@@ -104,7 +103,7 @@ func (o *ListTasksUnprocessableEntity) Error() string {
 	return fmt.Sprintf("[GET /tasks][%d] listTasksUnprocessableEntity  %+v", 422, o.Payload)
 }
 
-func (o *ListTasksUnprocessableEntity) readResponse(response client.Response, consumer httpkit.Consumer, formats strfmt.Registry) error {
+func (o *ListTasksUnprocessableEntity) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
 	o.Payload = new(models.ValidationError)
 
@@ -125,10 +124,14 @@ func NewListTasksDefault(code int) *ListTasksDefault {
 
 /*ListTasksDefault handles this case with default header values.
 
-ListTasksDefault list tasks default
+Error response
 */
 type ListTasksDefault struct {
 	_statusCode int
+
+	XErrorCode string
+
+	Payload *models.Error
 }
 
 // Code gets the status code for the list tasks default response
@@ -137,10 +140,20 @@ func (o *ListTasksDefault) Code() int {
 }
 
 func (o *ListTasksDefault) Error() string {
-	return fmt.Sprintf("[GET /tasks][%d] listTasks default ", o._statusCode)
+	return fmt.Sprintf("[GET /tasks][%d] listTasks default  %+v", o._statusCode, o.Payload)
 }
 
-func (o *ListTasksDefault) readResponse(response client.Response, consumer httpkit.Consumer, formats strfmt.Registry) error {
+func (o *ListTasksDefault) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
+
+	// response header X-Error-Code
+	o.XErrorCode = response.GetHeader("X-Error-Code")
+
+	o.Payload = new(models.Error)
+
+	// response payload
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
+		return err
+	}
 
 	return nil
 }

@@ -24,20 +24,23 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-openapi/analysis"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestUniqueOperationNames(t *testing.T) {
-	doc, err := spec.Load("../fixtures/codegen/todolist.simple.yml")
+	doc, err := loads.Spec("../fixtures/codegen/todolist.simple.yml")
 	if assert.NoError(t, err) {
 		sp := doc.Spec()
 		sp.Paths.Paths["/tasks"].Post.ID = "saveTask"
 		sp.Paths.Paths["/tasks"].Post.AddExtension("origName", "createTask")
 		sp.Paths.Paths["/tasks/{id}"].Put.ID = "saveTask"
 		sp.Paths.Paths["/tasks/{id}"].Put.AddExtension("origName", "updateTask")
+		analyzed := analysis.New(sp)
 
-		ops := gatherOperations(doc, nil)
+		ops := gatherOperations(analyzed, nil)
 		assert.Len(t, ops, 4)
 		_, exists := ops["saveTask"]
 		assert.True(t, exists)
@@ -47,15 +50,16 @@ func TestUniqueOperationNames(t *testing.T) {
 }
 
 func TestEmptyOperationNames(t *testing.T) {
-	doc, err := spec.Load("../fixtures/codegen/todolist.simple.yml")
+	doc, err := loads.Spec("../fixtures/codegen/todolist.simple.yml")
 	if assert.NoError(t, err) {
 		sp := doc.Spec()
 		sp.Paths.Paths["/tasks"].Post.ID = ""
 		sp.Paths.Paths["/tasks"].Post.AddExtension("origName", "createTask")
 		sp.Paths.Paths["/tasks/{id}"].Put.ID = ""
 		sp.Paths.Paths["/tasks/{id}"].Put.AddExtension("origName", "updateTask")
+		analyzed := analysis.New(sp)
 
-		ops := gatherOperations(doc, nil)
+		ops := gatherOperations(analyzed, nil)
 		assert.Len(t, ops, 4)
 		_, exists := ops["PostTasks"]
 		assert.True(t, exists)
@@ -209,7 +213,7 @@ func TestRenderOperation_InstagramSearch(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					//fmt.Println(res)
-					assertInCode(t, "Data []*DataItems0 `json:\"data,omitempty\"`", res)
+					assertInCode(t, "Data []*DataItems0 `json:\"data\"`", res)
 					assertInCode(t, "models.Media", res)
 				}
 			}
@@ -222,12 +226,13 @@ func methodPathOpBuilder(method, path, fname string) (codeGenOpBuilder, error) {
 		fname = "../fixtures/codegen/todolist.simple.yml"
 	}
 
-	specDoc, err := spec.Load(fname)
+	specDoc, err := loads.Spec(fname)
 	if err != nil {
 		return codeGenOpBuilder{}, err
 	}
 
-	op, ok := specDoc.OperationFor(method, path)
+	analyzed := analysis.New(specDoc.Spec())
+	op, ok := analyzed.OperationFor(method, path)
 	if !ok {
 		return codeGenOpBuilder{}, errors.New("No operation could be found for " + method + " " + path)
 	}
@@ -242,6 +247,7 @@ func methodPathOpBuilder(method, path, fname string) (codeGenOpBuilder, error) {
 		Target:        ".",
 		Operation:     *op,
 		Doc:           specDoc,
+		Analyzed:      analyzed,
 		Authed:        false,
 		ExtraSchemas:  make(map[string]GenSchema),
 	}, nil
@@ -252,12 +258,13 @@ func opBuilder(name, fname string) (codeGenOpBuilder, error) {
 		fname = "../fixtures/codegen/todolist.simple.yml"
 	}
 
-	specDoc, err := spec.Load(fname)
+	specDoc, err := loads.Spec(fname)
 	if err != nil {
 		return codeGenOpBuilder{}, err
 	}
+	analyzed := analysis.New(specDoc.Spec())
 
-	method, path, op, ok := specDoc.OperationForName(name)
+	method, path, op, ok := analyzed.OperationForName(name)
 	if !ok {
 		return codeGenOpBuilder{}, errors.New("No operation could be found for " + name)
 	}
@@ -272,6 +279,7 @@ func opBuilder(name, fname string) (codeGenOpBuilder, error) {
 		Target:        ".",
 		Operation:     *op,
 		Doc:           specDoc,
+		Analyzed:      analyzed,
 		Authed:        false,
 		ExtraSchemas:  make(map[string]GenSchema),
 	}, nil
@@ -342,6 +350,7 @@ func TestBuilder_Issue287(t *testing.T) {
 	log.SetOutput(ioutil.Discard)
 	defer log.SetOutput(os.Stderr)
 	dr, _ := os.Getwd()
+
 	appGen, err := newAppGenerator("plainTexter", nil, nil, &GenOpts{
 		Spec:              filepath.FromSlash("../fixtures/bugs/287/swagger.yml"),
 		IncludeModel:      true,
@@ -366,6 +375,42 @@ func TestBuilder_Issue287(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, "case \"text/plain\":", res)
+				} else {
+					fmt.Println(buf.String())
+				}
+			}
+		}
+	}
+}
+
+func TestBuilder_Issue465(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
+	defer log.SetOutput(os.Stderr)
+	dr, _ := os.Getwd()
+	appGen, err := newAppGenerator("plainTexter", nil, nil, &GenOpts{
+		Spec:              filepath.FromSlash("../fixtures/bugs/465/swagger.yml"),
+		IncludeModel:      true,
+		IncludeValidator:  true,
+		IncludeHandler:    true,
+		IncludeParameters: true,
+		IncludeResponses:  true,
+		IncludeMain:       true,
+		APIPackage:        "restapi",
+		ModelPackage:      "model",
+		ServerPackage:     "server",
+		ClientPackage:     "client",
+		Target:            dr,
+	})
+	if assert.NoError(t, err) {
+		op, err := appGen.makeCodegenApp()
+		if assert.NoError(t, err) {
+			buf := bytes.NewBuffer(nil)
+			err := clientFacadeTemplate.Execute(buf, op)
+			if assert.NoError(t, err) {
+				ff, err := formatGoFile("put_testing.go", buf.Bytes())
+				if assert.NoError(t, err) {
+					res := string(ff)
+					assertInCode(t, "/v1/fancyAPI", res)
 				} else {
 					fmt.Println(buf.String())
 				}

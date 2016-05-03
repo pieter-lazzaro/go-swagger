@@ -8,11 +8,12 @@ import (
   "strings"
   "net/http"
 
-  spec "github.com/go-swagger/go-swagger/spec"
-  strfmt "github.com/go-swagger/go-swagger/strfmt"
-  httpkit "github.com/go-swagger/go-swagger/httpkit"
-  middleware "github.com/go-swagger/go-swagger/httpkit/middleware"{{ if .SecurityDefinitions }}
-  security "github.com/go-swagger/go-swagger/httpkit/security"{{ end }}
+  spec "github.com/go-openapi/spec"
+  loads "github.com/go-openapi/loads"
+  strfmt "github.com/go-openapi/strfmt"
+  runtime "github.com/go-openapi/runtime"
+  middleware "github.com/go-openapi/runtime/middleware"{{ if .SecurityDefinitions }}
+  security "github.com/go-openapi/runtime/security"{{ end }}
 
   {{ range .DefaultImports }}{{ printf "%q" . }}
   {{ end }}
@@ -21,7 +22,7 @@ import (
 )
 
 // New{{ pascalize .Name }}API creates a new {{ pascalize .Name }} instance
-func New{{ pascalize .Name }}API(spec *spec.Document) *{{ pascalize .Name }}API {
+func New{{ pascalize .Name }}API(spec *loads.Document) *{{ pascalize .Name }}API {
   {{.ReceiverName}} := &{{ pascalize .Name }}API{
     spec:     spec,
     handlers: make(map[string]map[string]http.Handler),
@@ -36,17 +37,17 @@ func New{{ pascalize .Name }}API(spec *spec.Document) *{{ pascalize .Name }}API 
 
 /*{{ pascalize .Name }}API {{ if .Info }}{{ if .Info.Description }}{{.Info.Description}}{{ else }}the {{ humanize .Name }} API{{ end }}{{ end }} */
 type {{ pascalize .Name }}API struct {
-  spec            *spec.Document
+  spec            *loads.Document
   context         *middleware.Context
   handlers        map[string]map[string]http.Handler
   formats         strfmt.Registry
   defaultConsumes string
   defaultProduces string
   {{range .Consumes}}// {{ pascalize .Name }}Consumer registers a consumer for a "{{ .MediaType }}" mime type
-  {{ pascalize .Name }}Consumer httpkit.Consumer
+  {{ pascalize .Name }}Consumer runtime.Consumer
   {{end}}
   {{range .Produces}}// {{ pascalize .Name }}Producer registers a producer for a "{{ .MediaType }}" mime type
-  {{ pascalize .Name }}Producer httpkit.Producer
+  {{ pascalize .Name }}Producer runtime.Producer
   {{end}}
   {{range .SecurityDefinitions}}
   {{if .IsBasicAuth}}// {{ pascalize .ID }}Auth registers a function that takes username and password and returns a principal
@@ -137,14 +138,15 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}API) ServeErrorFor(operationID str
   return {{.ReceiverName}}.ServeError
 }
 // AuthenticatorsFor gets the authenticators for the specified security schemes
-func ({{.ReceiverName}} *{{ pascalize .Name }}API) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]httpkit.Authenticator {
+func ({{.ReceiverName}} *{{ pascalize .Name }}API) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]runtime.Authenticator {
   {{if .SecurityDefinitions}}
-  result := make(map[string]httpkit.Authenticator)
+  result := make(map[string]runtime.Authenticator)
   for name, scheme := range schemes {
     switch name {
       {{range .SecurityDefinitions}}
       case "{{.ID}}":
-        {{if .IsBasicAuth}}result[name] = security.BasicAuth(func (u, p string) (interface{}, error) { return {{.ReceiverName}}.{{ pascalize .ID }}Auth(u, p)}){{end}}
+        {{if .IsBasicAuth}}_ = scheme
+        result[name] = security.BasicAuth(func (u, p string) (interface{}, error) { return {{.ReceiverName}}.{{ pascalize .ID }}Auth(u, p)}){{end}}
         {{if .IsAPIKeyAuth}}result[name] = security.APIKeyAuth(scheme.Name, scheme.In, func(tok string) (interface{}, error) { return {{.ReceiverName}}.{{ pascalize .ID }}Auth(tok) }){{end}}
       {{end}}
     }
@@ -156,9 +158,9 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}API) AuthenticatorsFor(schemes map
 }
 
 // ConsumersFor gets the consumers for the specified media types
-func ({{.ReceiverName}} *{{ pascalize .Name }}API) ConsumersFor(mediaTypes []string) map[string]httpkit.Consumer {
+func ({{.ReceiverName}} *{{ pascalize .Name }}API) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
   {{if .Consumes}}
-  result := make(map[string]httpkit.Consumer)
+  result := make(map[string]runtime.Consumer)
   for _, mt := range mediaTypes {
     switch mt {
       {{range .Consumes}}
@@ -176,9 +178,9 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}API) ConsumersFor(mediaTypes []str
 }
 
 // ProducersFor gets the producers for the specified media types
-func ({{.ReceiverName}} *{{ pascalize .Name }}API) ProducersFor(mediaTypes []string) map[string]httpkit.Producer {
+func ({{.ReceiverName}} *{{ pascalize .Name }}API) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
   {{if .Produces}}
-  result := make(map[string]httpkit.Producer)
+  result := make(map[string]runtime.Producer)
   for _, mt := range mediaTypes {
     switch mt {
       {{range .Produces}}

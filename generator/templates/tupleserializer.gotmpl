@@ -3,14 +3,22 @@
 func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(data []byte) error {
   // stage 1, get the array but just the array
   var stage1 []json.RawMessage
-  if err := json.Unmarshal(data, &stage1); err != nil {
+  buf := bytes.NewBuffer(raw)
+  dec := json.NewDecoder(buf)
+  dec.UseNumber()
+
+  if err := dec.Decode(&stage1); err != nil {
     return err
   }
+
   // stage 2{{ if .AdditionalItems }}
   var lastIndex int
   {{ end }}
   {{ range $idx, $val := .Properties }}if len(stage1) > {{ $idx }} {
-    if err := json.Unmarshal(stage1[{{ $idx }}], {{ if (not $val.IsNullable) }}&{{ end }}{{ $val.ReceiverName }}.{{ pascalize $val.Name }}); err != nil {
+    buf = bytes.NewBuffer(stage1[{{ $idx }}])
+    dec := json.NewDecoder(buf)
+    dec.UseNumber()
+    if err := dec.Decode({{ if (not $val.IsNullable) }}&{{ end }}{{ $val.ReceiverName }}.{{ pascalize $val.Name }}); err != nil {
       return err
     }{{ if $.AdditionalItems }}
     lastIndex = {{ $idx }}{{end}}
@@ -20,7 +28,10 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(data []byte) error
   if len(stage1) > lastIndex+1 {
     for _, val := range stage1[lastIndex+1:] {
       var toadd {{ template "schemaType" .AdditionalItems }}
-      if err := json.Unmarshal(val, {{ if not .AdditionalItems.IsNullable }}&{{ end }}toadd); err != nil {
+      buf = bytes.NewBuffer(val)
+      dec := json.NewDecoder(buf)
+      dec.UseNumber()
+      if err := dec.Decode({{ if not .AdditionalItems.IsNullable }}&{{ end }}toadd); err != nil {
         return err
       }
       {{ .ValueExpression }} = append({{ .ValueExpression }}, toadd)
@@ -47,7 +58,11 @@ func ({{.ReceiverName}} {{ pascalize .Name }}) MarshalJSON() ([]byte, error) {
 func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(raw []byte) error {
   var data {{ template "subTypeBody" . }}
 
-  if err := json.Unmarshal(raw, &data); err != nil {
+  buf := bytes.NewBuffer(raw)
+  dec := json.NewDecoder(buf)
+  dec.UseNumber()
+
+  if err := dec.Decode(&data); err != nil {
     return err
   }
 
@@ -70,28 +85,57 @@ func ({{.ReceiverName}} {{ pascalize .Name }}) MarshalJSON() ([]byte, error) {
 {{ define "hasDiscriminatedSerializer" }}
 // UnmarshalJSON unmarshals this object with a polymorphic type from a JSON structure
 func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(raw []byte) error {
-  var data {{ template "withoutBaseTypeBody". }}
-
-  if err := json.Unmarshal(raw, &data); err != nil {
-    return err
+  var data struct {
+    {{ range .AllOf }}
+    {{ if or (and .IsBaseType .IsExported) .IsAnonymous }}{{ range .Properties }}
+    {{ if not $.IsExported }}{{ if $.IsTuple }}{{ template "privtuplefield" . }}{{ else }}{{template "privstructfield" . }}{{ end }}{{ else }}{{ if $.IsTuple }}{{ template "tuplefield" . }}{{ else }}{{template "structfield" . }}{{ end }}{{ end}}
+    {{ end }}{{ if .HasAdditionalProperties }}{{ if .AdditionalProperties }}{{ if .IsExported }}{{ pascalize .AdditionalProperties.Name }}{{ else }}{{ .AdditionalProperties.Name }}{{ end }} map[string]{{ template "schemaType" .AdditionalProperties }} `json:"-"`  {{end}}{{ end }}
+    {{ if .AdditionalItems }}{{ if and .IsExported }}{{ pascalize .AdditionalItems.Name }}{{ else }}{{ .AdditionalItems.Name }}{{ end }} []{{ template "schemaType" .AdditionalItems }} `json:"-"`
+    {{ end }}
+    {{ else }}
+    {{ if not (and .IsBaseType .IsExported) }}{{ .GoType }}{{ end }}{{ end }}
+    {{ end }}
+    {{range .Properties}}{{ if not .IsBaseType }}
+    {{ if not $.IsExported }}{{template "privstructfield" . }}{{ else }}{{ pascalize .Name}} {{ template "schemaType" . }} `json:"{{ .Name }}{{ if not .Required }},omitempty{{ end }}"`{{ end}}
+    {{else}}
+    {{ if not $.IsExported }}{{template "privstructfield" . }}{{ else }}{{ pascalize .Name}} json.RawMessage `json:"{{ .Name }}{{ if not .Required }},omitempty{{ end }}"`{{ end}}
+    {{end}}{{ end }}
+    {{ if .HasAdditionalProperties }}{{ if and .IsExported }}{{ pascalize .AdditionalProperties.Name }}{{ else }}{{ pascalize .AdditionalProperties.Name }}Field{{ end }} map[string]{{ template "schemaType" .AdditionalProperties }} `json:"-"`
+    {{ end }}
+    {{ if .AdditionalItems }}{{ if and .IsExported (not .IsSubType) }}{{ pascalize .AdditionalItems.Name }}{{ else }}{{ pascalize .AdditionalItems.Name }}Field{{ end }} []{{ template "schemaType" .AdditionalItems }} `json:"-"`
+    {{ end }}
   }
-  {{ range .AllOf }}{{ if .IsAnonymous }}{{ range $idx, $val := .Properties }}{{ if .IsBaseType }}allOf{{ $idx }}{{ pascalize $val.Name }}, err := Unmarshal{{ $val.GoType }}(bytes.NewBuffer(raw), httpkit.JSONConsumer())
+
+  buf := bytes.NewBuffer(raw)
+  dec := json.NewDecoder(buf)
+  dec.UseNumber()
+  
+  if err := dec.Decode(&data); err != nil {
+  	return err
+  }
+
+  {{ range .AllOf }}{{ if .IsAnonymous }}{{ range $idx, $val := .Properties }}{{ if .IsBaseType }}allOf{{ $idx }}{{ pascalize $val.Name }}, err := Unmarshal{{ $val.GoType }}(bytes.NewBuffer(raw), runtime.JSONConsumer())
   if err != nil {
     return err
   }
-  {{ end }}{{ end }}{{ end }}{{ end}}{{ range .Properties }}{{ if and ( not .IsArray ) .IsBaseType }}{{ camelize .Name }}, err := Unmarshal{{ .GoType }}(bytes.NewBuffer(raw), httpkit.JSONConsumer())
+  {{ end }}{{ end }}{{ end }}{{ end}}{{ range .Properties }}{{ if and ( not .IsArray ) .IsBaseType }}{{ camelize .Name }}, err := Unmarshal{{ .GoType }}(bytes.NewBuffer(data.{{ pascalize .Name}}), runtime.JSONConsumer())
   if err != nil {
     return err
   }{{ else if and .IsArray .IsBaseType }}var {{ camelize .Name }} {{ .GoType }}
+
+  buf = bytes.NewBuffer(raw)
+  dec = json.NewDecoder(buf)
+  dec.UseNumber()
+  
   untypedObj := make(map[string]interface{})
-  if err := json.Unmarshal(raw, &untypedObj); err != nil {
+  if err := dec.Decode(&untypedObj); err != nil {
     return err
   }
   if untyped{{ pascalize .Name }}, ok := untypedObj[{{ printf "%q" .Name }}]; ok {
     if slc{{ pascalize .Name}}, ok := untyped{{ pascalize .Name }}.([]interface{}); ok {
       for _, slcEl := range slc{{ pascalize .Name }} {
         slcJSON, _ := json.Marshal(slcEl)
-        slcObj, err := Unmarshal{{ .Items.GoType }}(bytes.NewBuffer(slcJSON), httpkit.JSONConsumer())
+        slcObj, err := Unmarshal{{ .Items.GoType }}(bytes.NewBuffer(slcJSON), runtime.JSONConsumer())
         if err != nil {
           return err
         }
@@ -123,9 +167,9 @@ func ({{.ReceiverName}} {{ pascalize .Name }}) MarshalJSON() ([]byte, error) { {
 		return nil, err
 	}
 	b2, err = json.Marshal(struct{ {{ range .AllOf }}{{ if .IsAnonymous }}{{ range .Properties }}{{ if .IsBaseType }}
-    {{ pascalize .Name }} {{ template "schemaType" . }} `json:"{{ .Name }},omitempty"`
+    {{ pascalize .Name }} {{ template "schemaType" . }} `json:"{{ .Name }}{{ if not .Required }},omitempty{{ end }}"`
   {{ end }}{{ end }}{{ end }}{{ end }}{{ range .Properties }}{{ if .IsBaseType }}
-    {{ pascalize .Name }} {{ template "schemaType" . }} `json:"{{ .Name }},omitempty"`
+    {{ pascalize .Name }} {{ template "schemaType" . }} `json:"{{ .Name }}{{ if not .Required }},omitempty{{ end }}"`
   {{ end }}{{end}}}{ {{ range .AllOf }}{{ if .IsAnonymous }}{{ range .Properties }}{{ if .IsBaseType }}
     {{ pascalize .Name }}: {{ $receiverName }}.{{ if $.IsSubType}}{{ camelize .Name }}Field{{ else }}{{ pascalize .Name }}{{ end }},
   {{ end }}{{ end }}{{ end }}{{ end }}{{ range .Properties }}{{ if .IsBaseType }}

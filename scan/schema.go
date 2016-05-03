@@ -24,7 +24,7 @@ import (
 
 	"golang.org/x/tools/go/loader"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-openapi/spec"
 )
 
 type schemaTypable struct {
@@ -160,9 +160,10 @@ func (sd *schemaDecl) inferNames() (goName string, name string) {
 }
 
 type schemaParser struct {
-	program   *loader.Program
-	postDecls []schemaDecl
-	known     map[string]spec.Schema
+	program    *loader.Program
+	postDecls  []schemaDecl
+	known      map[string]spec.Schema
+	discovered *schemaDecl
 }
 
 func newSchemaParser(prog *loader.Program) *schemaParser {
@@ -197,6 +198,13 @@ func (scp *schemaParser) parseDecl(definitions map[string]spec.Schema, decl *sch
 	// the package and type are recorded in the extensions
 	// once type name is found convert it to a schema, by looking up the schema in the
 	// definitions dictionary that got passed into this parse method
+
+	// if our schemaParser is parsing a discovered schemaDecl and it does not match
+	// the current schemaDecl we can skip parsing.
+	if scp.discovered != nil && scp.discovered.Name != decl.Name {
+		return nil
+	}
+
 	decl.inferNames()
 	schema := definitions[decl.Name]
 	schPtr := &schema
@@ -690,7 +698,11 @@ func (scp *schemaParser) parseIdentProperty(pkg *loader.PackageInfo, expr *ast.I
 	// find the file this selector points to
 	file, gd, ts, err := findSourceFile(pkg, expr.Name)
 	if err != nil {
-		return swaggerSchemaForType(expr.Name, prop)
+		err := swaggerSchemaForType(expr.Name, prop)
+		if err != nil {
+			return fmt.Errorf("package %s, error is: %v", pkg.String(), err)
+		}
+		return nil
 	}
 	if at, ok := ts.Type.(*ast.ArrayType); ok {
 		// the swagger spec defines strfmt base64 as []byte.
@@ -722,8 +734,10 @@ func (scp *schemaParser) parseIdentProperty(pkg *loader.PackageInfo, expr *ast.I
 			return scp.parseIdentProperty(pkg, atpe, prop.Items())
 		case *ast.SelectorExpr:
 			return scp.typeForSelector(file, atpe, prop.Items())
+		case *ast.StarExpr:
+			return parseProperty(scp, file, atpe.X, prop.Items())
 		default:
-			return fmt.Errorf("unknown selector type: %#v", tpe)
+			return fmt.Errorf("unknown selector type: %#v", atpe)
 		}
 	case *ast.StructType:
 		sd := newSchemaDecl(file, gd, ts)
@@ -742,8 +756,23 @@ func (scp *schemaParser) parseIdentProperty(pkg *loader.PackageInfo, expr *ast.I
 	case *ast.SelectorExpr:
 		return scp.typeForSelector(file, tpe, prop)
 
+	case *ast.InterfaceType:
+		sd := newSchemaDecl(file, gd, ts)
+		sd.inferNames()
+		ref, err := spec.NewRef("#/definitions/" + sd.Name)
+		if err != nil {
+			return err
+		}
+		prop.SetRef(ref)
+		scp.postDecls = append(scp.postDecls, *sd)
+		return nil
+
 	default:
-		return swaggerSchemaForType(expr.Name, prop)
+		err := swaggerSchemaForType(expr.Name, prop)
+		if err != nil {
+			return fmt.Errorf("package %s, error is: %v", pkg.String(), err)
+		}
+		return nil
 	}
 
 }
@@ -867,7 +896,15 @@ func parseProperty(scp *schemaParser, gofile *ast.File, fld ast.Expr, prop swagg
 	case *ast.InterfaceType:
 		prop.Schema().Typed("object", "")
 	default:
-		return fmt.Errorf("%s is unsupported for a schema", ftpe)
+		pos := "unknown file:unknown position"
+		if scp != nil {
+			if scp.program != nil {
+				if scp.program.Fset != nil {
+					pos = scp.program.Fset.Position(fld.Pos()).String()
+				}
+			}
+		}
+		return fmt.Errorf("Expr (%s) is unsupported for a schema", pos)
 	}
 	return nil
 }

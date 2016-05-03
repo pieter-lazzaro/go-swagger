@@ -8,12 +8,13 @@ import (
 	"net/http"
 	"strings"
 
-	httpkit "github.com/go-swagger/go-swagger/httpkit"
-	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
-	security "github.com/go-swagger/go-swagger/httpkit/security"
-	spec "github.com/go-swagger/go-swagger/spec"
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
-	"github.com/go-swagger/go-swagger/swag"
+	loads "github.com/go-openapi/loads"
+	runtime "github.com/go-openapi/runtime"
+	middleware "github.com/go-openapi/runtime/middleware"
+	security "github.com/go-openapi/runtime/security"
+	spec "github.com/go-openapi/spec"
+	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations/pet"
 	"github.com/go-swagger/go-swagger/examples/generated/restapi/operations/store"
@@ -21,12 +22,12 @@ import (
 )
 
 // NewPetstoreAPI creates a new Petstore instance
-func NewPetstoreAPI(spec *spec.Document) *PetstoreAPI {
+func NewPetstoreAPI(spec *loads.Document) *PetstoreAPI {
 	o := &PetstoreAPI{
 		spec:            spec,
 		handlers:        make(map[string]map[string]http.Handler),
 		formats:         strfmt.Default,
-		defaultConsumes: "application/x-www-form-urlencoded",
+		defaultConsumes: "application/json",
 		defaultProduces: "application/json",
 		ServerShutdown:  func() {},
 	}
@@ -41,21 +42,23 @@ func NewPetstoreAPI(spec *spec.Document) *PetstoreAPI {
 For this sample, you can use the api key 'special-key' to test the authorization filters
 */
 type PetstoreAPI struct {
-	spec            *spec.Document
+	spec            *loads.Document
 	context         *middleware.Context
 	handlers        map[string]map[string]http.Handler
 	formats         strfmt.Registry
 	defaultConsumes string
 	defaultProduces string
-	// JSONConsumer registers a consumer for a "application/json" mime type
-	JSONConsumer httpkit.Consumer
 	// XMLConsumer registers a consumer for a "application/xml" mime type
-	XMLConsumer httpkit.Consumer
+	XMLConsumer runtime.Consumer
+	// JSONConsumer registers a consumer for a "application/json" mime type
+	JSONConsumer runtime.Consumer
+	// UrlformConsumer registers a consumer for a "application/x-www-form-urlencoded" mime type
+	UrlformConsumer runtime.Consumer
 
 	// JSONProducer registers a producer for a "application/json" mime type
-	JSONProducer httpkit.Producer
+	JSONProducer runtime.Producer
 	// XMLProducer registers a producer for a "application/xml" mime type
-	XMLProducer httpkit.Producer
+	XMLProducer runtime.Producer
 
 	// APIKeyAuth registers a function that takes a token and returns a principal
 	// it performs authentication based on an api key api_key provided in the header
@@ -79,9 +82,9 @@ type PetstoreAPI struct {
 	PetFindPetsByStatusHandler pet.FindPetsByStatusHandler
 	// PetFindPetsByTagsHandler sets the operation handler for the find pets by tags operation
 	PetFindPetsByTagsHandler pet.FindPetsByTagsHandler
-	// StoreGetOrderByIDHandler sets the operation handler for the get order by id operation
+	// StoreGetOrderByIDHandler sets the operation handler for the get order by Id operation
 	StoreGetOrderByIDHandler store.GetOrderByIDHandler
-	// PetGetPetByIDHandler sets the operation handler for the get pet by id operation
+	// PetGetPetByIDHandler sets the operation handler for the get pet by Id operation
 	PetGetPetByIDHandler pet.GetPetByIDHandler
 	// UserGetUserByNameHandler sets the operation handler for the get user by name operation
 	UserGetUserByNameHandler user.GetUserByNameHandler
@@ -144,12 +147,16 @@ func (o *PetstoreAPI) RegisterFormat(name string, format strfmt.Format, validato
 func (o *PetstoreAPI) Validate() error {
 	var unregistered []string
 
+	if o.XMLConsumer == nil {
+		unregistered = append(unregistered, "XMLConsumer")
+	}
+
 	if o.JSONConsumer == nil {
 		unregistered = append(unregistered, "JSONConsumer")
 	}
 
-	if o.XMLConsumer == nil {
-		unregistered = append(unregistered, "XMLConsumer")
+	if o.UrlformConsumer == nil {
+		unregistered = append(unregistered, "UrlformConsumer")
 	}
 
 	if o.JSONProducer == nil {
@@ -249,9 +256,9 @@ func (o *PetstoreAPI) ServeErrorFor(operationID string) func(http.ResponseWriter
 }
 
 // AuthenticatorsFor gets the authenticators for the specified security schemes
-func (o *PetstoreAPI) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]httpkit.Authenticator {
+func (o *PetstoreAPI) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]runtime.Authenticator {
 
-	result := make(map[string]httpkit.Authenticator)
+	result := make(map[string]runtime.Authenticator)
 	for name, scheme := range schemes {
 		switch name {
 
@@ -266,17 +273,20 @@ func (o *PetstoreAPI) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) 
 }
 
 // ConsumersFor gets the consumers for the specified media types
-func (o *PetstoreAPI) ConsumersFor(mediaTypes []string) map[string]httpkit.Consumer {
+func (o *PetstoreAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Consumer {
 
-	result := make(map[string]httpkit.Consumer)
+	result := make(map[string]runtime.Consumer)
 	for _, mt := range mediaTypes {
 		switch mt {
+
+		case "application/xml":
+			result["application/xml"] = o.XMLConsumer
 
 		case "application/json":
 			result["application/json"] = o.JSONConsumer
 
-		case "application/xml":
-			result["application/xml"] = o.XMLConsumer
+		case "application/x-www-form-urlencoded":
+			result["application/x-www-form-urlencoded"] = o.UrlformConsumer
 
 		}
 	}
@@ -285,9 +295,9 @@ func (o *PetstoreAPI) ConsumersFor(mediaTypes []string) map[string]httpkit.Consu
 }
 
 // ProducersFor gets the producers for the specified media types
-func (o *PetstoreAPI) ProducersFor(mediaTypes []string) map[string]httpkit.Producer {
+func (o *PetstoreAPI) ProducersFor(mediaTypes []string) map[string]runtime.Producer {
 
-	result := make(map[string]httpkit.Producer)
+	result := make(map[string]runtime.Producer)
 	for _, mt := range mediaTypes {
 		switch mt {
 

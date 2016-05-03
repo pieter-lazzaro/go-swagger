@@ -10,7 +10,7 @@ import (
 	"text/template/parse"
 
 	"bitbucket.org/pkg/inflect"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/swag"
 )
 
 var protectedTemplates = map[string]bool{
@@ -65,6 +65,7 @@ var FuncMap template.FuncMap = map[string]interface{}{
 		return swag.ToGoName("Nr " + arg)
 	},
 	"camelize":  swag.ToJSONName,
+	"varname":   swag.ToVarName,
 	"humanize":  swag.ToHumanNameLower,
 	"snakize":   swag.ToFileName,
 	"dasherize": swag.ToCommandName,

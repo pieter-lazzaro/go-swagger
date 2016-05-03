@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-swagger/go-swagger/spec"
+	"github.com/go-openapi/loads"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestEnum_StringThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "StringThing"
@@ -48,7 +48,7 @@ func TestEnum_StringThing(t *testing.T) {
 }
 
 func TestEnum_ComposedThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "ComposedThing"
@@ -63,7 +63,7 @@ func TestEnum_ComposedThing(t *testing.T) {
 					res := string(ff)
 					assertInCode(t, "m.StringThing.Validate(formats)", res)
 					assertInCode(t, "var composedThingTypeNamePropEnum []interface{}", res)
-					assertInCode(t, "m.validateNameEnum(\"name\", \"body\", m.Name)", res)
+					assertInCode(t, "m.validateNameEnum(\"name\", \"body\", *m.Name)", res)
 					assertInCode(t, k+") validateNameEnum(path, location string, value string)", res)
 				}
 			}
@@ -72,7 +72,7 @@ func TestEnum_ComposedThing(t *testing.T) {
 }
 
 func TestEnum_IntThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "IntThing"
@@ -86,7 +86,7 @@ func TestEnum_IntThing(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, "var intThingEnum []interface{}", res)
-					assertInCode(t, k+") validateIntThingEnum(path, location string, value int32)", res)
+					assertInCode(t, k+") validateIntThingEnum(path, location string, value IntThing)", res)
 					assertInCode(t, "m.validateIntThingEnum(\"\", \"body\", m)", res)
 				}
 			}
@@ -95,7 +95,7 @@ func TestEnum_IntThing(t *testing.T) {
 }
 
 func TestEnum_FloatThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "FloatThing"
@@ -109,7 +109,7 @@ func TestEnum_FloatThing(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, "var floatThingEnum []interface{}", res)
-					assertInCode(t, k+") validateFloatThingEnum(path, location string, value float32)", res)
+					assertInCode(t, k+") validateFloatThingEnum(path, location string, value FloatThing)", res)
 					assertInCode(t, "m.validateFloatThingEnum(\"\", \"body\", m)", res)
 				}
 			}
@@ -118,7 +118,7 @@ func TestEnum_FloatThing(t *testing.T) {
 }
 
 func TestEnum_SliceThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "SliceThing"
@@ -141,7 +141,7 @@ func TestEnum_SliceThing(t *testing.T) {
 }
 
 func TestEnum_SliceAndItemsThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "SliceAndItemsThing"
@@ -167,7 +167,7 @@ func TestEnum_SliceAndItemsThing(t *testing.T) {
 }
 
 func TestEnum_SliceAndAdditionalItemsThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "SliceAndAdditionalItemsThing"
@@ -185,10 +185,10 @@ func TestEnum_SliceAndAdditionalItemsThing(t *testing.T) {
 					//assertInCode(t, "m.validateSliceAndAdditionalItemsThingEnum(\"\", \"body\", m)", res)
 					assertInCode(t, "var sliceAndAdditionalItemsThingTypeP0PropEnum []interface{}", res)
 					assertInCode(t, k+") validateP0Enum(path, location string, value string)", res)
-					assertInCode(t, "m.validateP0Enum(\"0\", \"body\", m.P0)", res)
+					assertInCode(t, "m.validateP0Enum(\"0\", \"body\", *m.P0)", res)
 					assertInCode(t, "var sliceAndAdditionalItemsThingItemsEnum []interface{}", res)
 					assertInCode(t, k+") validateSliceAndAdditionalItemsThingItemsEnum(path, location string, value float32)", res)
-					assertInCode(t, "m.validateSliceAndAdditionalItemsThingItemsEnum(strconv.Itoa(i+1), \"body\", *m.SliceAndAdditionalItemsThingItems[i])", res)
+					assertInCode(t, "m.validateSliceAndAdditionalItemsThingItemsEnum(strconv.Itoa(i+1), \"body\", m.SliceAndAdditionalItemsThingItems[i])", res)
 				}
 			}
 		}
@@ -196,7 +196,7 @@ func TestEnum_SliceAndAdditionalItemsThing(t *testing.T) {
 }
 
 func TestEnum_MapThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "MapThing"
@@ -210,11 +210,11 @@ func TestEnum_MapThing(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, "var mapThingEnum []interface{}", res)
-					assertInCode(t, k+") validateMapThingEnum(path, location string, value map[string]string)", res)
+					assertInCode(t, k+") validateMapThingEnum(path, location string, value MapThing)", res)
 					assertInCode(t, "m.validateMapThingEnum(\"\", \"body\", m)", res)
 					assertInCode(t, "var mapThingValueEnum []interface{}", res)
 					assertInCode(t, k+") validateMapThingValueEnum(path, location string, value string)", res)
-					assertInCode(t, "m.validateMapThingValueEnum(k, \"body\", m[k])", res)
+					assertInCode(t, "m.validateMapThingValueEnum(k, \"body\", *m[k])", res)
 				} else {
 					fmt.Println(buf.String())
 				}
@@ -224,7 +224,7 @@ func TestEnum_MapThing(t *testing.T) {
 }
 
 func TestEnum_ObjectThing(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "ObjectThing"
@@ -256,15 +256,15 @@ func TestEnum_ObjectThing(t *testing.T) {
 					assertInCode(t, k+") validateCatsItemsEnum(path, location string, value string)", res)
 					assertInCode(t, k+"LionsTuple0) validateObjectThingLionsTuple0ItemsEnum(path, location string, value float64)", res)
 					assertInCode(t, k+") validateCats(", res)
-					assertInCode(t, "m.validateNameEnum(\"name\", \"body\", m.Name)", res)
-					assertInCode(t, "m.validateFlowerEnum(\"flower\", \"body\", *m.Flower)", res)
-					assertInCode(t, "m.validateFlourEnum(\"flour\", \"body\", *m.Flour)", res)
+					assertInCode(t, "m.validateNameEnum(\"name\", \"body\", *m.Name)", res)
+					assertInCode(t, "m.validateFlowerEnum(\"flower\", \"body\", m.Flower)", res)
+					assertInCode(t, "m.validateFlourEnum(\"flour\", \"body\", m.Flour)", res)
 					assertInCode(t, "m.validateWolvesEnum(\"wolves\", \"body\", m.Wolves)", res)
-					assertInCode(t, "m.validateWolvesValueEnum(\"wolves\"+\".\"+k, \"body\", m.Wolves[k])", res)
+					assertInCode(t, "m.validateWolvesValueEnum(\"wolves\"+\".\"+k, \"body\", *m.Wolves[k])", res)
 					assertInCode(t, "m.validateCatsItemsEnum(\"cats\"+\".\"+strconv.Itoa(i), \"body\", m.Cats[i])", res)
-					assertInCode(t, "m.validateP1Enum(\"P1\", \"body\", m.P1)", res)
-					assertInCode(t, "m.validateP0Enum(\"P0\", \"body\", m.P0)", res)
-					assertInCode(t, "m.validateObjectThingLionsTuple0ItemsEnum(strconv.Itoa(i), \"body\", *m.ObjectThingLionsTuple0Items[i])", res)
+					assertInCode(t, "m.validateP1Enum(\"P1\", \"body\", *m.P1)", res)
+					assertInCode(t, "m.validateP0Enum(\"P0\", \"body\", *m.P0)", res)
+					assertInCode(t, "m.validateObjectThingLionsTuple0ItemsEnum(strconv.Itoa(i), \"body\", m.ObjectThingLionsTuple0Items[i])", res)
 				}
 			}
 		}
@@ -274,7 +274,7 @@ func TestEnum_ObjectThing(t *testing.T) {
 func TestEnum_ComputeInstance(t *testing.T) {
 	// ensure that the enum validation for the anonymous object under the delegate property
 	// is rendered.
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "ComputeInstance"
@@ -287,9 +287,9 @@ func TestEnum_ComputeInstance(t *testing.T) {
 				ff, err := formatGoFile("object_thing.go", buf.Bytes())
 				if assert.NoError(t, err) {
 					res := string(ff)
-					assertInCode(t, "Region string `json:\"region,omitempty\"`", res)
+					assertInCode(t, "Region *string `json:\"region\"`", res)
 					assertInCode(t, "var computeInstanceTypeRegionPropEnum []interface{}", res)
-					assertInCode(t, "m.validateRegionEnum(\"region\", \"body\", m.Region)", res)
+					assertInCode(t, "m.validateRegionEnum(\"region\", \"body\", *m.Region)", res)
 				}
 			}
 		}
@@ -299,7 +299,7 @@ func TestEnum_ComputeInstance(t *testing.T) {
 func TestEnum_NewPrototype(t *testing.T) {
 	// ensure that the enum validation for the anonymous object under the delegate property
 	// is rendered.
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.enums.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "NewPrototype"
@@ -313,8 +313,8 @@ func TestEnum_NewPrototype(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, "ActivatingUser *NewPrototypeActivatingUser `json:\"activating_user,omitempty\"`", res)
-					assertInCode(t, "Delegate *NewPrototypeDelegate `json:\"delegate,omitempty\"`", res)
-					assertInCode(t, "Role string `json:\"role,omitempty\"`", res)
+					assertInCode(t, "Delegate *NewPrototypeDelegate `json:\"delegate\"`", res)
+					assertInCode(t, "Role *string `json:\"role\"`", res)
 					assertInCode(t, "var newPrototypeTypeRolePropEnum []interface{}", res)
 					assertInCode(t, "var newPrototypeDelegateTypeKindPropEnum []interface{}", res)
 					assertInCode(t, "m.validateDelegate(formats)", res)
@@ -329,7 +329,7 @@ func TestEnum_NewPrototype(t *testing.T) {
 }
 
 func TestEnum_Issue265(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/sodabooth.json")
+	specDoc, err := loads.Spec("../fixtures/codegen/sodabooth.json")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "SodaBrand"
@@ -350,7 +350,7 @@ func TestEnum_Issue265(t *testing.T) {
 }
 
 func TestEnum_Issue325(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/sodabooths.json")
+	specDoc, err := loads.Spec("../fixtures/codegen/sodabooths.json")
 	if assert.NoError(t, err) {
 		definitions := specDoc.Spec().Definitions
 		k := "SodaBrand"
@@ -383,6 +383,27 @@ func TestEnum_Issue325(t *testing.T) {
 					assertInCode(t, "var sodaTypeBrandPropEnum []interface{}", res)
 					assertInCode(t, "err := validate.Enum(path, location, value, sodaTypeBrandPropEnum)", res)
 					assert.Equal(t, 1, strings.Count(res, "m.validateBrandEnum"))
+				}
+			}
+		}
+	}
+}
+
+func TestEnum_Issue352(t *testing.T) {
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.enums.yml")
+	if assert.NoError(t, err) {
+		definitions := specDoc.Spec().Definitions
+		k := "slp_action_enum"
+		schema := definitions[k]
+		genModel, err := makeGenDefinition(k, "models", schema, specDoc)
+		if assert.NoError(t, err) {
+			buf := bytes.NewBuffer(nil)
+			err := modelTemplate.Execute(buf, genModel)
+			if assert.NoError(t, err) {
+				ff, err := formatGoFile("slp_action_enum.go", buf.Bytes())
+				if assert.NoError(t, err) {
+					res := string(ff)
+					assertInCode(t, ", value SlpActionEnum", res)
 				}
 			}
 		}

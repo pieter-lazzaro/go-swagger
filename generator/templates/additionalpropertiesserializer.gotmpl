@@ -2,11 +2,15 @@
 // UnmarshalJSON unmarshals this object with additional properties from JSON
 func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(data []byte) error {
   // stage 1, bind the properties
-  var stage1 {{ pascalize .Name }}
+  var stage1 {{ template "withoutAdditionalBody" . }}
   if err := json.Unmarshal(data, &stage1); err != nil {
     return err
   }
-  *{{ .ReceiverName }} = stage1
+  var rcv {{ pascalize .Name }}
+  {{ range .Properties }}
+  rcv.{{ pascalize .Name }} = stage1.{{ pascalize .Name }}
+  {{ end }}
+  *{{ .ReceiverName }} = rcv
 
   // stage 2, remove properties and add to map
   stage2 := make(map[string]{{ if .AdditionalProperties }}json.RawMessage{{ else }}interface{}{{ end }})
@@ -40,8 +44,13 @@ func ({{.ReceiverName}} *{{ pascalize .Name }}) UnmarshalJSON(data []byte) error
 
 // MarshalJSON marshals this object with additional properties into a JSON object
 func ({{.ReceiverName}} {{ pascalize .Name }}) MarshalJSON() ([]byte, error) {
+  var stage1 {{ template "withoutAdditionalBody" . }}
+  {{ range .Properties }}
+  stage1.{{ pascalize .Name }} = {{ .ValueExpression }}
+  {{ end }}
+
   // make JSON object for known properties
-  props, err := json.Marshal({{ .ReceiverName }})
+  props, err := json.Marshal(stage1)
   if err != nil {
     return nil, err
   }

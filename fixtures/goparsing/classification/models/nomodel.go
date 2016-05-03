@@ -15,8 +15,8 @@
 package models
 
 import (
+	"github.com/go-openapi/strfmt"
 	"github.com/go-swagger/go-swagger/fixtures/goparsing/classification/transitive/mods"
-	"github.com/go-swagger/go-swagger/strfmt"
 )
 
 // NoModel is a struct without an annotation.
@@ -150,11 +150,12 @@ type OtherTypes struct {
 	ModsTimeds    []mods.SomeTimedType  `json:"modsTimeds"`
 	ModsPetteds   []mods.SomePettedType `json:"modsPetteds"`
 
-	ManyModsNamed    mods.SomeStringsType `json:"manyModsNamed"`
-	ManyModsNumbered mods.SomeIntsType    `json:"manyModsNumbered"`
-	ManyModsDated    mods.SomeTimesType   `json:"manyModsDated"`
-	ManyModsTimed    mods.SomeTimedsType  `json:"manyModsTimed"`
-	ManyModsPetted   mods.SomePettedsType `json:"manyModsPetted"`
+	ManyModsNamed     mods.SomeStringsType    `json:"manyModsNamed"`
+	ManyModsNumbered  mods.SomeIntsType       `json:"manyModsNumbered"`
+	ManyModsDated     mods.SomeTimesType      `json:"manyModsDated"`
+	ManyModsTimed     mods.SomeTimedsType     `json:"manyModsTimed"`
+	ManyModsPetted    mods.SomePettedsType    `json:"manyModsPetted"`
+	ManyModsPettedPtr mods.SomePettedsPtrType `json:"manyModsPettedPtr"`
 }
 
 // A SimpleOne is a model with a few simple fields
@@ -516,5 +517,14 @@ type ModelX struct {
 	// swagger:allOf com.tesla.models.ModelX
 	TeslaCar
 	// The number of doors on this Model X
+	Doors int `json:"doors"`
+}
+
+// The ModelA version of the tesla car
+//
+// swagger:model modelA
+type ModelA struct {
+	Tesla TeslaCar
+	// The number of doors on this Model A
 	Doors int `json:"doors"`
 }

@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +31,7 @@ func TestBodyParams(t *testing.T) {
 		t.FailNow()
 	}
 
-	_, _, op, ok := b.Doc.OperationForName("updateTask")
+	_, _, op, ok := b.Analyzed.OperationForName("updateTask")
 	if assert.True(t, ok) && assert.NotNil(t, op) {
 		resolver := &typeResolver{ModelsPackage: b.ModelsPackage, Doc: b.Doc}
 		resolver.KnownDefs = make(map[string]struct{})
@@ -59,7 +59,7 @@ func TestBodyParams(t *testing.T) {
 		t.FailNow()
 	}
 
-	_, _, op, ok = b.Doc.OperationForName("createTask")
+	_, _, op, ok = b.Analyzed.OperationForName("createTask")
 	if assert.True(t, ok) && assert.NotNil(t, op) {
 		resolver := &typeResolver{ModelsPackage: b.ModelsPackage, Doc: b.Doc}
 		resolver.KnownDefs = make(map[string]struct{})
@@ -261,7 +261,7 @@ type paramTestContext struct {
 }
 
 func (ctx *paramTestContext) assertParameter(t testing.TB) bool {
-	_, _, op, err := ctx.B.Doc.OperationForName(ctx.OpID)
+	_, _, op, err := ctx.B.Analyzed.OperationForName(ctx.OpID)
 	if assert.True(t, err) && assert.NotNil(t, op) {
 		resolver := &typeResolver{ModelsPackage: ctx.B.ModelsPackage, Doc: ctx.B.Doc}
 		resolver.KnownDefs = make(map[string]struct{})
@@ -585,6 +585,46 @@ func TestGenParameter_Issue248(t *testing.T) {
 				if assert.NoError(t, err) {
 					res := string(ff)
 					assertInCode(t, ", *o.OptionalQueryEnum", res)
+				} else {
+					fmt.Println(buf.String())
+				}
+			}
+		}
+	}
+}
+
+func TestGenParameter_Issue350(t *testing.T) {
+	b, err := opBuilder("withBoolDefault", "../fixtures/codegen/todolist.allparams.yml")
+	if assert.NoError(t, err) {
+		op, err := b.MakeOperation()
+		if assert.NoError(t, err) {
+			buf := bytes.NewBuffer(nil)
+			err := parameterTemplate.Execute(buf, op)
+			if assert.NoError(t, err) {
+				ff, err := formatGoFile("with_bool_default.go", buf.Bytes())
+				if assert.NoError(t, err) {
+					res := string(ff)
+					assertInCode(t, "Verbose: &verboseDefault", res)
+				} else {
+					fmt.Println(buf.String())
+				}
+			}
+		}
+	}
+}
+
+func TestGenParameter_Issue351(t *testing.T) {
+	b, err := opBuilder("withArray", "../fixtures/codegen/todolist.allparams.yml")
+	if assert.NoError(t, err) {
+		op, err := b.MakeOperation()
+		if assert.NoError(t, err) {
+			buf := bytes.NewBuffer(nil)
+			err := parameterTemplate.Execute(buf, op)
+			if assert.NoError(t, err) {
+				ff, err := formatGoFile("with_array.go", buf.Bytes())
+				if assert.NoError(t, err) {
+					res := string(ff)
+					assertInCode(t, "validate.MinLength(fmt.Sprintf(\"%s.%v\", \"sha256\", i), \"query\", string(sha256I), 64)", res)
 				} else {
 					fmt.Println(buf.String())
 				}

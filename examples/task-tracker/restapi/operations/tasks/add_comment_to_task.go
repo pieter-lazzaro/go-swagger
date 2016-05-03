@@ -6,10 +6,10 @@ package tasks
 import (
 	"net/http"
 
-	"github.com/go-swagger/go-swagger/errors"
-	middleware "github.com/go-swagger/go-swagger/httpkit/middleware"
-	"github.com/go-swagger/go-swagger/httpkit/validate"
-	"github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-openapi/errors"
+	middleware "github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/validate"
 )
 
 // AddCommentToTaskHandlerFunc turns a function with the right signature into a add comment to task handler
@@ -78,17 +78,17 @@ swagger:model AddCommentToTaskBody
 */
 type AddCommentToTaskBody struct {
 
-	/* Content content
+	/* content
 
 	Required: true
 	*/
-	Content string `json:"content,omitempty"`
+	Content *string `json:"content"`
 
-	/* UserID user id
+	/* user Id
 
 	Required: true
 	*/
-	UserID int64 `json:"userId,omitempty"`
+	UserID *int64 `json:"userId"`
 }
 
 // Validate validates this add comment to task body
@@ -113,7 +113,7 @@ func (o *AddCommentToTaskBody) Validate(formats strfmt.Registry) error {
 
 func (o *AddCommentToTaskBody) validateContent(formats strfmt.Registry) error {
 
-	if err := validate.RequiredString("body"+"."+"content", "body", string(o.Content)); err != nil {
+	if err := validate.Required("body"+"."+"content", "body", o.Content); err != nil {
 		return err
 	}
 
@@ -122,7 +122,7 @@ func (o *AddCommentToTaskBody) validateContent(formats strfmt.Registry) error {
 
 func (o *AddCommentToTaskBody) validateUserID(formats strfmt.Registry) error {
 
-	if err := validate.Required("body"+"."+"userId", "body", int64(o.UserID)); err != nil {
+	if err := validate.Required("body"+"."+"userId", "body", o.UserID); err != nil {
 		return err
 	}
 

@@ -18,9 +18,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/loads/fmts"
 	"github.com/go-swagger/go-swagger/cmd/swagger/commands"
 	"github.com/jessevdk/go-flags"
 )
+
+func init() {
+	loads.AddLoader(fmts.YAMLMatcher, fmts.YAMLDoc)
+}
 
 var opts struct {
 	// Version bool `long:"version" short:"v" description:"print the version of the command"`

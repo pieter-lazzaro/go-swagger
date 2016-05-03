@@ -17,7 +17,7 @@ package mods
 import (
 	"time"
 
-	"github.com/go-swagger/go-swagger/strfmt"
+	"github.com/go-openapi/strfmt"
 )
 
 // SomeStringsType is a type that refines []string
@@ -35,6 +35,9 @@ type SomeTimedsType []strfmt.DateTime
 
 // SomePettedsType is a type that refines mods.Pet
 type SomePettedsType []Pet
+
+// SomePettedsPtrType is a type that refines array of mods.Pet pointers
+type SomePettedsPtrType []*Pet
 
 // SomeStringType is a type that refines string
 type SomeStringType string

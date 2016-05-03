@@ -21,8 +21,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/swag"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,7 +56,7 @@ func assertValidation(t testing.TB, pth, expr string, gm GenSchema) bool {
 }
 
 func TestSchemaValidation_RequiredProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "RequiredProps"
 		schema := specDoc.Spec().Definitions[k]
@@ -85,7 +85,7 @@ func TestSchemaValidation_RequiredProps(t *testing.T) {
 }
 
 func TestSchemaValidation_Strings(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedString"
 		schema := specDoc.Spec().Definitions[k]
@@ -112,7 +112,7 @@ func TestSchemaValidation_Strings(t *testing.T) {
 }
 
 func TestSchemaValidation_StringProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "StringValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -141,7 +141,7 @@ func TestSchemaValidation_StringProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedNumber(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNumber"
 		schema := specDoc.Spec().Definitions[k]
@@ -157,8 +157,8 @@ func TestSchemaValidation_NamedNumber(t *testing.T) {
 						res := string(formatted)
 						//fmt.Println(res)
 						assertInCode(t, k+") Validate(formats", res)
-						assertInCode(t, "err := validate.Minimum", res)
-						assertInCode(t, "err := validate.Maximum", res)
+						assertInCode(t, "err := validate.MinimumInt", res)
+						assertInCode(t, "err := validate.MaximumInt", res)
 						assertInCode(t, "err := validate.MultipleOf", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -169,7 +169,7 @@ func TestSchemaValidation_NamedNumber(t *testing.T) {
 }
 
 func TestSchemaValidation_NumberProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NumberValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -186,8 +186,8 @@ func TestSchemaValidation_NumberProps(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "m.validateAge(formats", res)
-						assertInCode(t, "err := validate.Minimum(\"age\",", res)
-						assertInCode(t, "err := validate.Maximum(\"age\",", res)
+						assertInCode(t, "err := validate.MinimumInt(\"age\",", res)
+						assertInCode(t, "err := validate.MaximumInt(\"age\",", res)
 						assertInCode(t, "err := validate.MultipleOf(\"age\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -198,7 +198,7 @@ func TestSchemaValidation_NumberProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedArray(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedArray"
 		schema := specDoc.Spec().Definitions[k]
@@ -227,7 +227,7 @@ func TestSchemaValidation_NamedArray(t *testing.T) {
 }
 
 func TestSchemaValidation_ArrayProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "ArrayValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -258,7 +258,7 @@ func TestSchemaValidation_ArrayProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedNestedArray(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNestedArray"
 		schema := specDoc.Spec().Definitions[k]
@@ -294,7 +294,7 @@ func TestSchemaValidation_NamedNestedArray(t *testing.T) {
 }
 
 func TestSchemaValidation_NestedArrayProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NestedArrayValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -332,7 +332,7 @@ func TestSchemaValidation_NestedArrayProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedNestedObject(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNestedObject"
 		schema := specDoc.Spec().Definitions[k]
@@ -381,7 +381,7 @@ func TestSchemaValidation_NamedNestedObject(t *testing.T) {
 }
 
 func TestSchemaValidation_NestedObjectProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NestedObjectValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -431,7 +431,7 @@ func TestSchemaValidation_NestedObjectProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedArrayMulti(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedArrayMulti"
 		schema := specDoc.Spec().Definitions[k]
@@ -448,7 +448,7 @@ func TestSchemaValidation_NamedArrayMulti(t *testing.T) {
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, k+") validateP0(formats", res)
 						assertInCode(t, k+") validateP1(formats", res)
-						assertInCode(t, "err := validate.RequiredString(\"0\",", res)
+						assertInCode(t, "err := validate.Required(\"0\",", res)
 						assertInCode(t, "err := validate.MinLength(\"0\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"0\",", res)
 						assertInCode(t, "err := validate.Pattern(\"0\",", res)
@@ -465,7 +465,7 @@ func TestSchemaValidation_NamedArrayMulti(t *testing.T) {
 }
 
 func TestSchemaValidation_ArrayMultiProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "ArrayMultiValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -482,7 +482,7 @@ func TestSchemaValidation_ArrayMultiProps(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "m.validateArgs(formats", res)
-						assertInCode(t, "err := validate.RequiredString(\"P0\",", res)
+						assertInCode(t, "err := validate.Required(\"P0\",", res)
 						assertInCode(t, "err := validate.MinLength(\"P0\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"P0\",", res)
 						assertInCode(t, "err := validate.Pattern(\"P0\",", res)
@@ -499,7 +499,7 @@ func TestSchemaValidation_ArrayMultiProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedArrayAdditional(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedArrayAdditional"
 		schema := specDoc.Spec().Definitions[k]
@@ -516,7 +516,7 @@ func TestSchemaValidation_NamedArrayAdditional(t *testing.T) {
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, k+") validateP0(formats", res)
 						assertInCode(t, k+") validateP1(formats", res)
-						assertInCode(t, "err := validate.RequiredString(\"0\",", res)
+						assertInCode(t, "err := validate.Required(\"0\",", res)
 						assertInCode(t, "err := validate.MinLength(\"0\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"0\",", res)
 						assertInCode(t, "err := validate.Pattern(\"0\",", res)
@@ -535,7 +535,7 @@ func TestSchemaValidation_NamedArrayAdditional(t *testing.T) {
 }
 
 func TestSchemaValidation_ArrayAdditionalProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "ArrayAdditionalValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -552,7 +552,7 @@ func TestSchemaValidation_ArrayAdditionalProps(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "m.validateArgs(formats", res)
-						assertInCode(t, "err := validate.RequiredString(\"P0\",", res)
+						assertInCode(t, "err := validate.Required(\"P0\",", res)
 						assertInCode(t, "err := validate.MinLength(\"P0\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"P0\",", res)
 						assertInCode(t, "err := validate.Pattern(\"P0\",", res)
@@ -570,7 +570,7 @@ func TestSchemaValidation_ArrayAdditionalProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedMap(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedMap"
 		schema := specDoc.Spec().Definitions[k]
@@ -586,8 +586,8 @@ func TestSchemaValidation_NamedMap(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "for k := range m {", res)
-						assertInCode(t, "err := validate.Minimum(k,", res)
-						assertInCode(t, "err := validate.Maximum(k,", res)
+						assertInCode(t, "err := validate.MinimumInt(k,", res)
+						assertInCode(t, "err := validate.MaximumInt(k,", res)
 						assertInCode(t, "err := validate.MultipleOf(k,", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -598,7 +598,7 @@ func TestSchemaValidation_NamedMap(t *testing.T) {
 }
 
 func TestSchemaValidation_MapProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "MapValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -616,8 +616,8 @@ func TestSchemaValidation_MapProps(t *testing.T) {
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "m.validateMeta(formats", res)
 						assertInCode(t, "for k := range m.Meta {", res)
-						assertInCode(t, "err := validate.Minimum(\"meta\"+\".\"+k,", res)
-						assertInCode(t, "err := validate.Maximum(\"meta\"+\".\"+k,", res)
+						assertInCode(t, "err := validate.MinimumInt(\"meta\"+\".\"+k,", res)
+						assertInCode(t, "err := validate.MaximumInt(\"meta\"+\".\"+k,", res)
 						assertInCode(t, "err := validate.MultipleOf(\"meta\"+\".\"+k,", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -628,7 +628,7 @@ func TestSchemaValidation_MapProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedMapComplex(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedMapComplex"
 		schema := specDoc.Spec().Definitions[k]
@@ -644,12 +644,12 @@ func TestSchemaValidation_NamedMapComplex(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "for k := range m {", res)
-						assertInCode(t, "m[k].Validate(formats)", res)
+						assertInCode(t, "val.Validate(formats)", res)
 						assertInCode(t, "err := validate.MinLength(\"name\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"name\",", res)
 						assertInCode(t, "err := validate.Pattern(\"name\",", res)
-						assertInCode(t, "err := validate.Minimum(\"age\",", res)
-						assertInCode(t, "err := validate.Maximum(\"age\",", res)
+						assertInCode(t, "err := validate.MinimumInt(\"age\",", res)
+						assertInCode(t, "err := validate.MaximumInt(\"age\",", res)
 						assertInCode(t, "err := validate.MultipleOf(\"age\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -660,7 +660,7 @@ func TestSchemaValidation_NamedMapComplex(t *testing.T) {
 }
 
 func TestSchemaValidation_MapComplexProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "MapComplexValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -676,12 +676,12 @@ func TestSchemaValidation_MapComplexProps(t *testing.T) {
 						res := string(formatted)
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "for k := range m.Meta {", res)
-						assertInCode(t, "m.Meta[k].Validate(formats)", res)
+						assertInCode(t, "val.Validate(formats)", res)
 						assertInCode(t, "err := validate.MinLength(\"name\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"name\",", res)
 						assertInCode(t, "err := validate.Pattern(\"name\",", res)
-						assertInCode(t, "err := validate.Minimum(\"age\",", res)
-						assertInCode(t, "err := validate.Maximum(\"age\",", res)
+						assertInCode(t, "err := validate.MinimumInt(\"age\",", res)
+						assertInCode(t, "err := validate.MaximumInt(\"age\",", res)
 						assertInCode(t, "err := validate.MultipleOf(\"age\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -692,7 +692,7 @@ func TestSchemaValidation_MapComplexProps(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedNestedMap(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNestedMap"
 		schema := specDoc.Spec().Definitions[k]
@@ -710,8 +710,8 @@ func TestSchemaValidation_NamedNestedMap(t *testing.T) {
 						assertInCode(t, "for k := range m {", res)
 						assertInCode(t, "for kk := range m[k] {", res)
 						assertInCode(t, "for kkk := range m[k][kk] {", res)
-						assertInCode(t, "err := validate.Minimum(k+\".\"+kk+\".\"+kkk,", res)
-						assertInCode(t, "err := validate.Maximum(k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "err := validate.MinimumInt(k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "err := validate.MaximumInt(k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "err := validate.MultipleOf(k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -722,7 +722,7 @@ func TestSchemaValidation_NamedNestedMap(t *testing.T) {
 }
 
 func TestSchemaValidation_NestedMapProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NestedMapValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -742,8 +742,8 @@ func TestSchemaValidation_NestedMapProps(t *testing.T) {
 						assertInCode(t, "for k := range m.Meta {", res)
 						assertInCode(t, "for kk := range m.Meta[k] {", res)
 						assertInCode(t, "for kkk := range m.Meta[k][kk] {", res)
-						assertInCode(t, "err := validate.Minimum(\"meta\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
-						assertInCode(t, "err := validate.Maximum(\"meta\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "err := validate.MinimumInt(\"meta\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "err := validate.MaximumInt(\"meta\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "err := validate.MultipleOf(\"meta\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -753,7 +753,7 @@ func TestSchemaValidation_NestedMapProps(t *testing.T) {
 	}
 }
 func TestAdditionalProperties_Simple(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedMapComplex"
 		schema := specDoc.Spec().Definitions[k]
@@ -793,7 +793,7 @@ func TestAdditionalProperties_Simple(t *testing.T) {
 }
 
 func TestAdditionalProperties_Nested(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNestedMapComplex"
 		schema := specDoc.Spec().Definitions[k]
@@ -844,7 +844,7 @@ func TestAdditionalProperties_Nested(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedNestedMapComplex(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedNestedMapComplex"
 		schema := specDoc.Spec().Definitions[k]
@@ -864,12 +864,12 @@ func TestSchemaValidation_NamedNestedMapComplex(t *testing.T) {
 								assertInCode(t, "for k := range m {", res)
 								assertInCode(t, "for kk := range m[k] {", res)
 								assertInCode(t, "for kkk := range m[k][kk] {", res)
-								assertInCode(t, "m[k][kk][kkk].Validate(formats)", res)
+								assertInCode(t, "val.Validate(formats)", res)
 								assertInCode(t, "err := validate.MinLength(\"name\",", res)
 								assertInCode(t, "err := validate.MaxLength(\"name\",", res)
 								assertInCode(t, "err := validate.Pattern(\"name\",", res)
-								assertInCode(t, "err := validate.Minimum(\"age\",", res)
-								assertInCode(t, "err := validate.Maximum(\"age\",", res)
+								assertInCode(t, "err := validate.MinimumInt(\"age\",", res)
+								assertInCode(t, "err := validate.MaximumInt(\"age\",", res)
 								assertInCode(t, "err := validate.MultipleOf(\"age\",", res)
 								assertInCode(t, "errors.CompositeValidationError(res...)", res)
 							} else {
@@ -884,7 +884,7 @@ func TestSchemaValidation_NamedNestedMapComplex(t *testing.T) {
 }
 
 func TestSchemaValidation_NestedMapPropsComplex(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NestedMapComplexValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -904,12 +904,12 @@ func TestSchemaValidation_NestedMapPropsComplex(t *testing.T) {
 						assertInCode(t, "for k := range m.Meta {", res)
 						assertInCode(t, "for kk := range m.Meta[k] {", res)
 						assertInCode(t, "for kkk := range m.Meta[k][kk] {", res)
-						assertInCode(t, "m.Meta[k][kk][kkk].Validate(formats)", res)
+						assertInCode(t, "val.Validate(formats)", res)
 						assertInCode(t, "err := validate.MinLength(\"name\",", res)
 						assertInCode(t, "err := validate.MaxLength(\"name\",", res)
 						assertInCode(t, "err := validate.Pattern(\"name\",", res)
-						assertInCode(t, "err := validate.Minimum(\"age\",", res)
-						assertInCode(t, "err := validate.Maximum(\"age\",", res)
+						assertInCode(t, "err := validate.MinimumInt(\"age\",", res)
+						assertInCode(t, "err := validate.MaximumInt(\"age\",", res)
 						assertInCode(t, "err := validate.MultipleOf(\"age\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -920,7 +920,7 @@ func TestSchemaValidation_NestedMapPropsComplex(t *testing.T) {
 }
 
 func TestSchemaValidation_NamedAllOf(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "NamedAllOf"
 		schema := specDoc.Spec().Definitions[k]
@@ -943,14 +943,14 @@ func TestSchemaValidation_NamedAllOf(t *testing.T) {
 						assertInCode(t, k+") validateExtOpts(formats", res)
 						assertInCode(t, k+") validateCoords(formats", res)
 						assertInCode(t, "validate.MinLength(\"name\",", res)
-						assertInCode(t, "validate.Minimum(\"age\",", res)
+						assertInCode(t, "validate.MinimumInt(\"age\",", res)
 						assertInCode(t, "validate.MinItems(\"args\",", res)
 						assertInCode(t, "validate.MinItems(\"assoc\",", res)
 						assertInCode(t, "validate.MinItems(\"assoc\"+\".\"+strconv.Itoa(i),", res)
 						assertInCode(t, "validate.MinItems(\"assoc\"+\".\"+strconv.Itoa(i)+\".\"+strconv.Itoa(ii),", res)
 						assertInCode(t, "validate.MinLength(\"assoc\"+\".\"+strconv.Itoa(i)+\".\"+strconv.Itoa(ii)+\".\"+strconv.Itoa(iii),", res)
 						assertInCode(t, "validate.Minimum(\"opts\"+\".\"+k,", res)
-						assertInCode(t, "validate.Minimum(\"extOpts\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "validate.MinimumInt(\"extOpts\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "validate.MinLength(\"coords\"+\".\"+\"name\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -961,7 +961,7 @@ func TestSchemaValidation_NamedAllOf(t *testing.T) {
 }
 
 func TestSchemaValidation_AllOfProps(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "AllOfValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -979,14 +979,14 @@ func TestSchemaValidation_AllOfProps(t *testing.T) {
 						assertInCode(t, k+") Validate(formats", res)
 						assertInCode(t, "m.validateMeta(formats", res)
 						assertInCode(t, "validate.MinLength(\"meta\"+\".\"+\"name\",", res)
-						assertInCode(t, "validate.Minimum(\"meta\"+\".\"+\"age\",", res)
+						assertInCode(t, "validate.MinimumInt(\"meta\"+\".\"+\"age\",", res)
 						assertInCode(t, "validate.MinItems(\"meta\"+\".\"+\"args\",", res)
 						assertInCode(t, "validate.MinItems(\"meta\"+\".\"+\"assoc\",", res)
 						assertInCode(t, "validate.MinItems(\"meta\"+\".\"+\"assoc\"+\".\"+strconv.Itoa(i),", res)
 						assertInCode(t, "validate.MinItems(\"meta\"+\".\"+\"assoc\"+\".\"+strconv.Itoa(i)+\".\"+strconv.Itoa(ii),", res)
 						assertInCode(t, "validate.MinLength(\"meta\"+\".\"+\"assoc\"+\".\"+strconv.Itoa(i)+\".\"+strconv.Itoa(ii)+\".\"+strconv.Itoa(iii),", res)
-						assertInCode(t, "validate.Minimum(\"meta\"+\".\"+\"opts\"+\".\"+k,", res)
-						assertInCode(t, "validate.Minimum(\"meta\"+\".\"+\"extOpts\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
+						assertInCode(t, "validate.MinimumInt(\"meta\"+\".\"+\"opts\"+\".\"+k,", res)
+						assertInCode(t, "validate.MinimumInt(\"meta\"+\".\"+\"extOpts\"+\".\"+k+\".\"+kk+\".\"+kkk,", res)
 						assertInCode(t, "validate.MinLength(\"meta\"+\".\"+\"coords\"+\".\"+\"name\",", res)
 						assertInCode(t, "errors.CompositeValidationError(res...)", res)
 					}
@@ -997,7 +997,7 @@ func TestSchemaValidation_AllOfProps(t *testing.T) {
 }
 
 func TestSchemaValidation_RefedAllOf(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "RefedAllOfValidations"
 		schema := specDoc.Spec().Definitions[k]
@@ -1025,7 +1025,7 @@ func TestSchemaValidation_RefedAllOf(t *testing.T) {
 
 func TestSchemaValidation_SimpleZeroAllowed(t *testing.T) {
 
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "SimpleZeroAllowed"
 		schema := specDoc.Spec().Definitions[k]
@@ -1040,7 +1040,8 @@ func TestSchemaValidation_SimpleZeroAllowed(t *testing.T) {
 					res := string(formatted)
 					assertInCode(t, k+") Validate(formats", res)
 					assertInCode(t, "swag.IsZero(m.ID)", res)
-					assertInCode(t, "validate.RequiredString(\"name\", \"body\", string(m.Name))", res)
+					assertInCode(t, "validate.Required(\"name\", \"body\", m.Name)", res)
+					assertInCode(t, "validate.MinLength(\"id\", \"body\", string(m.ID), 2)", res)
 					assertInCode(t, "validate.Required(\"urls\", \"body\", m.Urls)", res)
 					assertInCode(t, "errors.CompositeValidationError(res...)", res)
 				}
@@ -1050,7 +1051,7 @@ func TestSchemaValidation_SimpleZeroAllowed(t *testing.T) {
 }
 
 func TestSchemaValidation_Pet(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "Pet"
 		schema := specDoc.Spec().Definitions[k]
@@ -1066,7 +1067,7 @@ func TestSchemaValidation_Pet(t *testing.T) {
 					assertInCode(t, k+") Validate(formats", res)
 					assertInCode(t, "swag.IsZero(m.Status)", res)
 					assertInCode(t, "swag.IsZero(m.Tags)", res)
-					assertInCode(t, "validate.RequiredString(\"name\", \"body\", string(m.Name))", res)
+					assertInCode(t, "validate.Required(\"name\", \"body\", m.Name)", res)
 					assertInCode(t, "validate.Required(\"photoUrls\", \"body\", m.PhotoUrls)", res)
 					assertInCode(t, "errors.CompositeValidationError(res...)", res)
 				}
@@ -1076,7 +1077,7 @@ func TestSchemaValidation_Pet(t *testing.T) {
 }
 
 func TestSchemaValidation_UpdateOrg(t *testing.T) {
-	specDoc, err := spec.Load("../fixtures/codegen/todolist.schemavalidation.yml")
+	specDoc, err := loads.Spec("../fixtures/codegen/todolist.schemavalidation.yml")
 	if assert.NoError(t, err) {
 		k := "UpdateOrg"
 		schema := specDoc.Spec().Definitions[k]
@@ -1091,8 +1092,8 @@ func TestSchemaValidation_UpdateOrg(t *testing.T) {
 					res := string(formatted)
 					assertInCode(t, k+") Validate(formats", res)
 					assertInCode(t, "swag.IsZero(m.TagExpiration)", res)
-					assertInCode(t, "validate.Minimum(\"tag_expiration\", \"body\", float64(*m.TagExpiration)", res)
-					assertInCode(t, "validate.Maximum(\"tag_expiration\", \"body\", float64(*m.TagExpiration)", res)
+					assertInCode(t, "validate.MinimumInt(\"tag_expiration\", \"body\", int64(*m.TagExpiration)", res)
+					assertInCode(t, "validate.MaximumInt(\"tag_expiration\", \"body\", int64(*m.TagExpiration)", res)
 					assertInCode(t, "errors.CompositeValidationError(res...)", res)
 				} else {
 					fmt.Println(buf.String())

@@ -4,10 +4,10 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	strfmt "github.com/go-swagger/go-swagger/strfmt"
+	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit/validate"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/validate"
 )
 
 /*Comment A comment for an issue.
@@ -26,7 +26,7 @@ type Comment struct {
 
 	Required: true
 	*/
-	Content string `json:"content,omitempty"`
+	Content *string `json:"content"`
 
 	/* The time at which this comment was created.
 
@@ -34,13 +34,13 @@ type Comment struct {
 
 	Read Only: true
 	*/
-	CreatedAt *strfmt.DateTime `json:"createdAt,omitempty"`
+	CreatedAt strfmt.DateTime `json:"createdAt,omitempty"`
 
-	/* User user
+	/* user
 
 	Required: true
 	*/
-	User *UserCard `json:"user,omitempty"`
+	User *UserCard `json:"user"`
 }
 
 // Validate validates this comment
@@ -65,7 +65,7 @@ func (m *Comment) Validate(formats strfmt.Registry) error {
 
 func (m *Comment) validateContent(formats strfmt.Registry) error {
 
-	if err := validate.RequiredString("content", "body", string(m.Content)); err != nil {
+	if err := validate.Required("content", "body", m.Content); err != nil {
 		return err
 	}
 

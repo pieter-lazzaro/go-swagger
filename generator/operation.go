@@ -23,9 +23,11 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/analysis"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 )
 
 // GenerateServerOperation generates a parameter model, parameter validator, http handler implementations for a given operation
@@ -50,22 +52,23 @@ func GenerateServerOperation(operationNames, tags []string, includeHandler, incl
 	if err != nil {
 		return err
 	}
+	analyzed := analysis.New(specDoc.Spec())
 
-	ops := gatherOperations(specDoc, operationNames)
+	ops := gatherOperations(analyzed, operationNames)
 
 	for operationName, opRef := range ops {
 		method, path, operation := opRef.Method, opRef.Path, opRef.Op
 		defaultScheme := opts.DefaultScheme
 		if defaultScheme == "" {
-			defaultScheme = "http"
+			defaultScheme = sHTTP
 		}
 		defaultProduces := opts.DefaultProduces
 		if defaultProduces == "" {
-			defaultProduces = "application/json"
+			defaultProduces = runtime.JSONMime
 		}
 		defaultConsumes := opts.DefaultConsumes
 		if defaultConsumes == "" {
-			defaultConsumes = "application/json"
+			defaultConsumes = runtime.JSONMime
 		}
 
 		apiPackage := mangleName(swag.ToFileName(opts.APIPackage), "api")
@@ -79,7 +82,7 @@ func GenerateServerOperation(operationNames, tags []string, includeHandler, incl
 			ClientPackage:        mangleName(swag.ToFileName(opts.ClientPackage), "client"),
 			ServerPackage:        serverPackage,
 			Operation:            *operation,
-			SecurityRequirements: specDoc.SecurityRequirementsFor(operation),
+			SecurityRequirements: analyzed.SecurityRequirementsFor(operation),
 			Principal:            opts.Principal,
 			Target:               filepath.Join(opts.Target, serverPackage),
 			Base:                 opts.Target,
@@ -90,7 +93,9 @@ func GenerateServerOperation(operationNames, tags []string, includeHandler, incl
 			DumpData:             opts.DumpData,
 			DefaultScheme:        defaultScheme,
 			DefaultProduces:      defaultProduces,
+			DefaultConsumes:      defaultConsumes,
 			Doc:                  specDoc,
+			Analyzed:             analyzed,
 		}
 		if err := generator.Generate(); err != nil {
 			return err
@@ -109,7 +114,7 @@ type operationGenerator struct {
 	ServerPackage        string
 	ClientPackage        string
 	Operation            spec.Operation
-	SecurityRequirements []spec.SecurityRequirement
+	SecurityRequirements []analysis.SecurityRequirement
 	Principal            string
 	Target               string
 	Base                 string
@@ -123,7 +128,9 @@ type operationGenerator struct {
 	DumpData             bool
 	DefaultScheme        string
 	DefaultProduces      string
-	Doc                  *spec.Document
+	DefaultConsumes      string
+	Doc                  *loads.Document
+	Analyzed             *analysis.Spec
 	WithContext          bool
 }
 
@@ -144,11 +151,13 @@ func (o *operationGenerator) Generate() error {
 	bldr.Operation = o.Operation
 	bldr.Authed = authed
 	bldr.Doc = o.Doc
+	bldr.Analyzed = o.Analyzed
 	bldr.DefaultScheme = o.DefaultScheme
 	bldr.DefaultProduces = o.DefaultProduces
 	bldr.DefaultImports = []string{filepath.ToSlash(filepath.Join(baseImport(o.Base), o.ModelsPackage))}
 	bldr.RootAPIPackage = o.APIPackage
 	bldr.WithContext = o.WithContext
+	bldr.DefaultConsumes = o.DefaultConsumes
 
 	for _, tag := range o.Operation.Tags {
 		if len(o.Tags) == 0 {
@@ -196,6 +205,7 @@ func (o *operationGenerator) Generate() error {
 		og.pkg = op.Package
 		og.cname = swag.ToGoName(op.Name)
 		og.Doc = o.Doc
+		og.Analyzed = o.Analyzed
 		og.Target = o.Target
 		og.APIPackage = o.APIPackage
 		og.WithContext = o.WithContext
@@ -212,7 +222,8 @@ type opGen struct {
 	IncludeHandler    bool
 	IncludeParameters bool
 	IncludeResponses  bool
-	Doc               *spec.Document
+	Doc               *loads.Document
+	Analyzed          *analysis.Spec
 	Target            string
 	APIPackage        string
 	WithContext       bool
@@ -227,7 +238,7 @@ func (o *opGen) Generate() error {
 		log.Println("generated handler", o.data.Package+"."+o.cname)
 	}
 
-	opParams := o.Doc.ParamsFor(o.data.Method, o.data.Path)
+	opParams := o.Analyzed.ParamsFor(o.data.Method, o.data.Path)
 	if o.IncludeParameters && len(opParams) > 0 {
 		if err := o.generateParameterModel(); err != nil {
 			return fmt.Errorf("parameters: %s", err)
@@ -304,7 +315,8 @@ type codeGenOpBuilder struct {
 	Target          string
 	WithContext     bool
 	Operation       spec.Operation
-	Doc             *spec.Document
+	Doc             *loads.Document
+	Analyzed        *analysis.Spec
 	Authed          bool
 	DefaultImports  []string
 	DefaultScheme   string
@@ -324,7 +336,7 @@ func (b *codeGenOpBuilder) MakeOperation() (GenOperation, error) {
 	operation := b.Operation
 	var params, qp, pp, hp, fp GenParameters
 	var hasQueryParams, hasFormParams, hasFileParams bool
-	for _, p := range b.Doc.ParamsFor(b.Method, b.Path) {
+	for _, p := range b.Analyzed.ParamsFor(b.Method, b.Path) {
 		cp, err := b.MakeParameter(receiver, resolver, p)
 		if err != nil {
 			return GenOperation{}, err
@@ -360,7 +372,7 @@ func (b *codeGenOpBuilder) MakeOperation() (GenOperation, error) {
 	if operation.Responses != nil {
 		for k, v := range operation.Responses.StatusCodeResponses {
 			isSuccess := k/100 == 2
-			gr, err := b.MakeResponse(receiver, swag.ToJSONName(b.Name+" "+httpkit.Statuses[k]), isSuccess, resolver, k, v)
+			gr, err := b.MakeResponse(receiver, swag.ToJSONName(b.Name+" "+runtime.Statuses[k]), isSuccess, resolver, k, v)
 			if err != nil {
 				return GenOperation{}, err
 			}
@@ -479,6 +491,18 @@ func (b *codeGenOpBuilder) MakeResponse(receiver, name string, isSuccess bool, r
 	if Debug {
 		log.Printf("[%s %s] making id %q", b.Method, b.Path, b.Operation.ID)
 	}
+
+	if resp.Ref.String() != "" {
+		resp2, err := spec.ResolveResponse(b.Doc.Spec(), resp.Ref)
+		if err != nil {
+			return GenResponse{}, err
+		}
+		if resp2 == nil {
+			return GenResponse{}, fmt.Errorf("could not resolve response ref: %s", resp.Ref.String())
+		}
+		resp = *resp2
+	}
+
 	res := GenResponse{
 		Package:        b.APIPackage,
 		ModelsPackage:  b.ModelsPackage,
@@ -575,6 +599,7 @@ func (b *codeGenOpBuilder) MakeHeader(receiver, name string, hdr spec.Header) Ge
 		Path:         fmt.Sprintf("%q", name),
 		Description:  hdr.Description,
 		Default:      hdr.Default,
+		HasDefault:   hdr.Default != nil,
 		Converter:    stringConverters[tpe.GoType],
 		Formatter:    stringFormatters[tpe.GoType],
 	}
@@ -606,7 +631,7 @@ func (b *codeGenOpBuilder) MakeParameterItem(receiver, paramName, indexVar, path
 	res.Formatter = stringFormatters[res.GoType]
 
 	if items.Items != nil {
-		pi, err := b.MakeParameterItem(receiver, paramName+" "+indexVar, indexVar+"[i]", "fmt.Sprintf(\"%s.%v\", "+path+", "+indexVar+")", valueExpression+"["+indexVar+"]", location, resolver, items.Items, items)
+		pi, err := b.MakeParameterItem(receiver, paramName+" "+indexVar, indexVar+"i", "fmt.Sprintf(\"%s.%v\", "+path+", "+indexVar+")", valueExpression+"I", location, resolver, items.Items, items)
 		if err != nil {
 			return GenItems{}, err
 		}
@@ -621,6 +646,18 @@ func (b *codeGenOpBuilder) MakeParameter(receiver string, resolver *typeResolver
 	if Debug {
 		log.Printf("[%s %s] making parameter %q", b.Method, b.Path, param.Name)
 	}
+
+	if param.Ref.String() != "" {
+		param2, err := spec.ResolveParameter(b.Doc.Spec(), param.Ref)
+		if err != nil {
+			return GenParameter{}, err
+		}
+		if param2 == nil {
+			return GenParameter{}, fmt.Errorf("could not resolve parameter ref: %s", param.Ref.String())
+		}
+		param = *param2
+	}
+
 	var child *GenItems
 	res := GenParameter{
 		Name:             param.Name,
@@ -630,6 +667,7 @@ func (b *codeGenOpBuilder) MakeParameter(receiver string, resolver *typeResolver
 		IndexVar:         "i",
 		BodyParam:        nil,
 		Default:          param.Default,
+		HasDefault:       param.Default != nil,
 		Enum:             param.Enum,
 		Description:      param.Description,
 		ReceiverName:     receiver,
@@ -721,7 +759,7 @@ func (b *codeGenOpBuilder) MakeParameter(receiver string, resolver *typeResolver
 		}
 
 		if param.Items != nil {
-			pi, err := b.MakeParameterItem(receiver, param.Name+" "+res.IndexVar, res.IndexVar+"i", "fmt.Sprintf(\"%s.%v\", "+res.Path+", "+res.IndexVar+")", res.ValueExpression+"["+res.IndexVar+"]", param.In, resolver, param.Items, nil)
+			pi, err := b.MakeParameterItem(receiver, param.Name+" "+res.IndexVar, res.IndexVar+"i", "fmt.Sprintf(\"%s.%v\", "+res.Path+", "+res.IndexVar+")", res.Name+"I", param.In, resolver, param.Items, nil)
 			if err != nil {
 				return GenParameter{}, err
 			}

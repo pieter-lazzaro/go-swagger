@@ -23,8 +23,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/analysis"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/spec"
+	"github.com/go-openapi/swag"
 	"golang.org/x/tools/imports"
 )
 
@@ -40,12 +42,12 @@ var reservedGoWords = []string{
 	"continue", "for", "import", "return", "var",
 }
 
-var defaultGoImports = []string{
-	"bool", "int", "int8", "int16", "int32", "int64",
-	"uint", "uint8", "uint16", "uint32", "uint64",
-	"float32", "float64", "interface{}", "string",
-	"byte", "rune",
-}
+// var defaultGoImports = []string{
+// 	"bool", "int", "int8", "int16", "int32", "int64",
+// 	"uint", "uint8", "uint16", "uint32", "uint64",
+// 	"float32", "float64", "interface{}", "string",
+// 	"byte", "rune",
+// }
 
 var reservedGoWordSet map[string]struct{}
 
@@ -102,12 +104,12 @@ type GenOpts struct {
 	WithContext       bool
 }
 
-type generatorOptions struct {
-	ModelPackage    string
-	TargetDirectory string
-}
+// type generatorOptions struct {
+// 	ModelPackage    string
+// 	TargetDirectory string
+// }
 
-func loadSpec(specFile string) (string, *spec.Document, error) {
+func loadSpec(specFile string) (string, *loads.Document, error) {
 	// find swagger spec document, verify it exists
 	specPath := specFile
 	var err error
@@ -119,7 +121,7 @@ func loadSpec(specFile string) (string, *spec.Document, error) {
 	}
 
 	// load swagger spec
-	specDoc, err := spec.Load(specPath)
+	specDoc, err := loads.Spec(specPath)
 	if err != nil {
 		return "", nil, err
 	}
@@ -169,21 +171,21 @@ func writeToFile(target, name string, content []byte) error {
 	return writeFile(target, ffn, res)
 }
 
-func writeToTestFile(target, name string, content []byte) error {
-	ffn := swag.ToFileName(name)
-	if !strings.HasSuffix(ffn, "_test") {
-		ffn += "_test"
-	}
-	ffn += ".go"
-
-	res, err := formatGoFile(filepath.Join(target, ffn), content)
-	if err != nil {
-		log.Println(err)
-		return writeFile(target, ffn, content)
-	}
-
-	return writeFile(target, ffn, res)
-}
+// func writeToTestFile(target, name string, content []byte) error {
+// 	ffn := swag.ToFileName(name)
+// 	if !strings.HasSuffix(ffn, "_test") {
+// 		ffn += "_test"
+// 	}
+// 	ffn += ".go"
+//
+// 	res, err := formatGoFile(filepath.Join(target, ffn), content)
+// 	if err != nil {
+// 		log.Println(err)
+// 		return writeFile(target, ffn, content)
+// 	}
+//
+// 	return writeFile(target, ffn, res)
+// }
 
 func writeFile(target, ffn string, content []byte) error {
 	if err := os.MkdirAll(target, 0755); err != nil {
@@ -193,22 +195,7 @@ func writeFile(target, ffn string, content []byte) error {
 	return ioutil.WriteFile(filepath.Join(target, ffn), content, 0644)
 }
 
-func commentedLines(str string) string {
-	lines := strings.Split(str, "\n")
-	var commented []string
-	for _, line := range lines {
-		if strings.TrimSpace(line) != "" {
-			if !strings.HasPrefix(strings.TrimSpace(line), "//") {
-				commented = append(commented, "// "+line)
-			} else {
-				commented = append(commented, line)
-			}
-		}
-	}
-	return strings.Join(commented, "\n")
-}
-
-func gatherModels(specDoc *spec.Document, modelNames []string) (map[string]spec.Schema, error) {
+func gatherModels(specDoc *loads.Document, modelNames []string) (map[string]spec.Schema, error) {
 	models, mnc := make(map[string]spec.Schema), len(modelNames)
 	defs := specDoc.Spec().Definitions
 
@@ -237,7 +224,7 @@ func gatherModels(specDoc *spec.Document, modelNames []string) (map[string]spec.
 	return models, nil
 }
 
-func appNameOrDefault(specDoc *spec.Document, name, defaultName string) string {
+func appNameOrDefault(specDoc *loads.Document, name, defaultName string) string {
 	if strings.TrimSpace(name) == "" {
 		if specDoc.Spec().Info != nil && strings.TrimSpace(specDoc.Spec().Info.Title) != "" {
 			name = specDoc.Spec().Info.Title
@@ -271,7 +258,7 @@ func (o opRefs) Len() int           { return len(o) }
 func (o opRefs) Swap(i, j int)      { o[i], o[j] = o[j], o[i] }
 func (o opRefs) Less(i, j int) bool { return o[i].Key < o[j].Key }
 
-func gatherOperations(specDoc *spec.Document, operationIDs []string) map[string]opRef {
+func gatherOperations(specDoc *analysis.Spec, operationIDs []string) map[string]opRef {
 	var oprefs opRefs
 
 	for method, pathItem := range specDoc.Operations() {

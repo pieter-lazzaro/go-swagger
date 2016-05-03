@@ -21,18 +21,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/go-swagger/go-swagger/errors"
-	"github.com/go-swagger/go-swagger/httpkit"
-	"github.com/go-swagger/go-swagger/httpkit/middleware"
-	"github.com/go-swagger/go-swagger/httpkit/middleware/untyped"
-	"github.com/go-swagger/go-swagger/spec"
-	"github.com/go-swagger/go-swagger/swag"
+	"github.com/go-openapi/errors"
+	"github.com/go-openapi/loads"
+	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/runtime/middleware"
+	"github.com/go-openapi/runtime/middleware/untyped"
+	"github.com/go-openapi/swag"
 )
 
 // NewPetstore creates a new petstore api handler
 func NewPetstore() (http.Handler, error) {
-	spec, err := spec.New(json.RawMessage([]byte(swaggerJSON)), "")
+	spec, err := loads.Analyzed(json.RawMessage([]byte(swaggerJSON)), "")
 	if err != nil {
 		return nil, err
 	}
@@ -46,14 +45,14 @@ func NewPetstore() (http.Handler, error) {
 	return middleware.Serve(spec, api), nil
 }
 
-var getAllPets = httpkit.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
+var getAllPets = runtime.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
 	fmt.Println("getAllPets")
-	spew.Println(data)
+	fmt.Printf("%#v\n", data)
 	return pets, nil
 })
-var createPet = httpkit.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
+var createPet = runtime.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
 	fmt.Println("createPet")
-	spew.Println(data)
+	fmt.Printf("%#v\n", data)
 	body := data.(map[string]interface{})["pet"]
 	var pet Pet
 	if err := swag.FromDynamicJSON(body, &pet); err != nil {
@@ -63,17 +62,17 @@ var createPet = httpkit.OperationHandlerFunc(func(data interface{}) (interface{}
 	return body, nil
 })
 
-var deletePet = httpkit.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
+var deletePet = runtime.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
 	fmt.Println("deletePet")
-	spew.Println(data)
+	fmt.Printf("%#v\n", data)
 	id := data.(map[string]interface{})["id"].(int64)
 	removePet(id)
 	return nil, nil
 })
 
-var getPetByID = httpkit.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
+var getPetByID = runtime.OperationHandlerFunc(func(data interface{}) (interface{}, error) {
 	fmt.Println("getPetByID")
-	spew.Println(data)
+	fmt.Printf("%#v\n", data)
 	id := data.(map[string]interface{})["id"].(int64)
 	return petByID(id)
 })
